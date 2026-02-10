@@ -138,6 +138,17 @@ snlite/
 
 ### Changelog
 
+v6.0.2
+
+Added
+
+- Regenerate now supports retry mode: keep context or clean context
+- Streaming done payload now includes finish reason (`completed` / `cancelled` / `interrupted` / `failed`)
+
+Improved
+
+- Assistant message metadata now shows explicit generation result state
+
 v6.0.1
 
 Added

@@ -337,6 +337,13 @@ button.ghost:hover{
 }
 .top-left,.top-right{ display:flex; gap:8px; align-items:center; flex-wrap: wrap; }
 
+#retryMode{
+  width:auto;
+  min-width: 180px;
+  padding: 8px 10px;
+  font-size: 12px;
+}
+
 .pill{
   display:inline-flex;
   align-items:center;

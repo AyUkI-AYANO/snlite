@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>SNLite v6.0.1</title>
-  <link rel="stylesheet" href="/static/style.css?v=6.0.1" />
+  <title>SNLite v6.0.2</title>
+  <link rel="stylesheet" href="/static/style.css?v=6.0.2" />
 </head>
 <body>
   <div class="app">
@@ -14,7 +14,7 @@
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v6.0.1 · Local GenAI</div>
+          <div class="sub">v6.0.2 · Local GenAI</div>
         </div>
       </div>
 
@@ -166,6 +166,10 @@
           </div>
           <button id="btnCopyLast" title="Copy last assistant message">Copy last</button>
           <button id="btnRegen" title="Regenerate last assistant message">Regenerate</button>
+          <select id="retryMode" title="Retry mode">
+            <option value="keep_params">Retry: Keep context</option>
+            <option value="clean_context">Retry: Clean context</option>
+          </select>
           <button id="btnRetry" title="Retry last failed request">Retry</button>
           <button id="btnStop" class="danger" disabled>Stop</button>
           <button id="btnClear" title="Clear UI (does not delete session)">Clear UI</button>
@@ -237,6 +241,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=6.0.1"></script>
+  <script src="/static/app.js?v=6.0.2"></script>
 </body>
 </html>
