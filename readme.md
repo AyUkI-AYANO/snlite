@@ -137,6 +137,31 @@ snlite/
 
 ### Changelog
 
+v0.5.1
+
+Added
+
+- One-click copy for assistant messages
+  
+  - Copy button available on each assistant message
+    
+  - Copies the original Markdown text (not rendered HTML)
+    
+  - Also supports “Copy last assistant message” from the top toolbar
+
+- Regenerate last response
+  
+  - Re-run generation for the latest assistant message
+    
+  - Automatically removes the previous response and replaces it with a new one
+    
+  - Preserves:
+    - system prompt
+    - model parameters
+    - extracted file context (PDF / DOCX / TXT / MD)
+      
+  - Gracefully rejects regeneration for image-based messages (image binaries are not stored)
+
 v0.5.0
 
 Auto-scroll during streaming (smart pause on manual scroll)
