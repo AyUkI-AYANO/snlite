@@ -30,7 +30,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="6.0.1")
+app = FastAPI(title="SNLite", version="6.0.2")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -494,6 +494,9 @@ async def _stream_chat_common(
         poll_task = asyncio.create_task(poll_cancel())
         saw_thinking = False
         saw_content = False
+        stream_error: Optional[str] = None
+        finish_reason = "interrupted"
+        elapsed_ms = 0
 
         try:
             yield f"event: meta\ndata: {json.dumps({'request_id': request_id}, ensure_ascii=False)}\n\n"
@@ -529,17 +532,34 @@ async def _stream_chat_common(
                     yield f"event: content\ndata: {json.dumps({'token': content}, ensure_ascii=False)}\n\n"
 
             elapsed_ms = int((asyncio.get_event_loop().time() - started_at) * 1000)
-            yield f"event: done\ndata: {json.dumps({'done': True, 'cancelled': cancelled(), 'elapsed_ms': elapsed_ms, 'output_chars': len(assistant_accum)}, ensure_ascii=False)}\n\n"
+            if cancelled():
+                finish_reason = "cancelled"
+            elif saw_content:
+                finish_reason = "completed"
+            else:
+                finish_reason = "interrupted"
 
         except Exception as e:
+            stream_error = str(e)
+            finish_reason = "failed"
+            elapsed_ms = int((asyncio.get_event_loop().time() - started_at) * 1000) if 'started_at' in locals() else 0
             yield f"event: error\ndata: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
         finally:
+            yield f"event: done\ndata: {json.dumps({'done': True, 'cancelled': cancelled(), 'finish_reason': finish_reason, 'elapsed_ms': elapsed_ms, 'output_chars': len(assistant_accum), 'error': stream_error}, ensure_ascii=False)}\n\n"
             poll_task.cancel()
 
             if assistant_accum.strip():
                 sess2 = store.get_session(session_id)
                 if sess2 and sess2.title != "__deleted__":
-                    sess2.messages.append({"role": "assistant", "content": assistant_accum})
+                    sess2.messages.append({
+                        "role": "assistant",
+                        "content": assistant_accum,
+                        "meta": {
+                            "finish_reason": finish_reason,
+                            "elapsed_ms": elapsed_ms,
+                            "output_chars": len(assistant_accum),
+                        }
+                    })
                     store.save_session(sess2)
 
             await registry.pop_stream(request_id)
@@ -627,6 +647,10 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
 async def chat_regenerate_stream(payload: Dict[str, Any]) -> Any:
     session_id = payload.get("session_id")
     show_trace = bool(payload.get("show_trace", False))
+    retry_mode = (payload.get("retry_mode") or "keep_params").strip()
+
+    if retry_mode not in ("keep_params", "clean_context"):
+        raise HTTPException(status_code=400, detail="retry_mode must be keep_params or clean_context")
 
     if not session_id:
         raise HTTPException(status_code=400, detail="session_id is required")
@@ -665,8 +689,11 @@ async def chat_regenerate_stream(payload: Dict[str, Any]) -> Any:
     sess.messages.pop(last_idx)
     store.save_session(sess)
 
-    # history: all messages before the user message
-    history = [{"role": m["role"], "content": m["content"]} for m in sess.messages[:prev_idx] if "role" in m and "content" in m]
+    # history mode
+    if retry_mode == "clean_context":
+        history = []
+    else:
+        history = [{"role": m["role"], "content": m["content"]} for m in sess.messages[:prev_idx] if "role" in m and "content" in m]
 
     request_id = await registry.new_stream()
 
@@ -680,7 +707,7 @@ async def chat_regenerate_stream(payload: Dict[str, Any]) -> Any:
         think_mode=str(think_mode),
         show_trace=show_trace,
         request_id=request_id,
-        request_meta={"regenerate": True},
+        request_meta={"regenerate": True, "retry_mode": retry_mode},
     )
 
 

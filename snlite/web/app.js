@@ -573,6 +573,9 @@ function setAssistantMeta(metaEl, data = {}) {
   if (data.cancelled) {
     parts.push("Stopped by user");
   }
+  if (data.finishReason) {
+    parts.push(`Result: ${data.finishReason}`);
+  }
   metaEl.textContent = parts.join(" · ");
 }
 
@@ -938,7 +941,11 @@ async function regenerateLast() {
 
   setStage("Answering…");
 
-  const body = { session_id: state.currentSessionId, show_trace: showTrace };
+  const body = {
+    session_id: state.currentSessionId,
+    show_trace: showTrace,
+    retry_mode: $("retryMode")?.value || "keep_params",
+  };
 
   const resp = await fetch("/api/chat/regenerate/stream", {
     method: "POST",
@@ -961,7 +968,7 @@ async function regenerateLast() {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let assistantRaw = "";
-  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false };
+  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false, finishReason: "" };
 
   updateUserScrolledFlag();
   if (!userScrolledUp) maybeAutoScroll(true);
@@ -1050,8 +1057,15 @@ async function regenerateLast() {
             streamMeta.elapsedMs = obj.elapsed_ms;
             streamMeta.outputChars = obj.output_chars;
             streamMeta.cancelled = !!obj.cancelled;
-            if (obj.cancelled) {
+            streamMeta.finishReason = obj.finish_reason || "";
+            if (obj.finish_reason === "cancelled") {
               assistantRaw += "\n\n[Generation stopped by user]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            } else if (obj.finish_reason === "failed") {
+              assistantRaw += "\n\n[Generation failed]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            } else if (obj.finish_reason === "interrupted") {
+              assistantRaw += "\n\n[Generation interrupted]";
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
@@ -1165,7 +1179,7 @@ async function send() {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let assistantRaw = "";
-  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false };
+  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false, finishReason: "" };
 
   updateUserScrolledFlag();
   if (!userScrolledUp) maybeAutoScroll(true);
@@ -1253,8 +1267,15 @@ async function send() {
             streamMeta.elapsedMs = obj.elapsed_ms;
             streamMeta.outputChars = obj.output_chars;
             streamMeta.cancelled = !!obj.cancelled;
-            if (obj.cancelled) {
+            streamMeta.finishReason = obj.finish_reason || "";
+            if (obj.finish_reason === "cancelled") {
               assistantRaw += "\n\n[Generation stopped by user]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            } else if (obj.finish_reason === "failed") {
+              assistantRaw += "\n\n[Generation failed]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            } else if (obj.finish_reason === "interrupted") {
+              assistantRaw += "\n\n[Generation interrupted]";
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
