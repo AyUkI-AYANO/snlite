@@ -49,6 +49,15 @@ git clone https://github.com/AyUkI-AYANO/snlite
 cd snlite
 pip install -e .
 ```
+or:
+
+Download from releases
+
+open console at root folder of release
+
+```bash
+pip install -e .
+```
 
 ---
 
