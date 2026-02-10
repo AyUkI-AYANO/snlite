@@ -1,7 +1,7 @@
 # SNLite
 
 **SNLite** is a lightweight, local-first GenAI chat UI built on top of **Ollama**.  
-It runs entirely on `localhost`, focuses on clarity and hackability, and exposes advanced features like **native thinking traces**, **image input**, and **document-assisted chat** — without becoming bloated.
+It runs entirely on `localhost`, focuses on clarity and hackability, and exposes advanced features like **native thinking traces**, **image input**, and **document-assisted chat** without becoming bloated.
 
 > Minimal UI · Streaming · Local only · No cloud lock-in
 
@@ -31,8 +31,9 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 ## Requirements
 
 - Python **3.10+**
+  https://www.python.org
 - **Ollama** installed and running  
-  👉 https://ollama.com
+  https://ollama.com
 
 Check:
 ```bash
