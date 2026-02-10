@@ -138,6 +138,16 @@ snlite/
 
 ### Changelog
 
+v0.5.3(.1)
+
+Fixed
+
+- High DRAM usage of Ollama
+
+Add
+
+- Automatic Ollama starter & terminator
+
 v0.5.2
 
 Fixed
