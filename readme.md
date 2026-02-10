@@ -9,20 +9,20 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 
 ## Features
 
-- 🧠 **Ollama native thinking support**
+- **Ollama native thinking support**
   - Separates `thinking` and final answer
   - Optional right-side workspace for trace inspection
-- 💬 **Streaming chat UI**
+- **Streaming chat UI**
   - Token-by-token output
   - Auto-scroll during generation (pauses when you scroll up)
-- 🖼 **Image input**
+- **Image input**
   - For multimodal models (e.g. LLaVA, Qwen-VL)
-- 📄 **File attachments**
+- **File attachments**
   - PDF / DOCX / TXT / MD
   - Text is extracted and injected into the prompt (no binary storage)
-- 🗂 **Sessions with auto titles**
+- **Sessions with auto titles**
   - First user message → automatic chat title
-- 🧩 **Lightweight & hackable**
+- **Lightweight & hackable**
   - No frontend framework
   - Plain FastAPI + vanilla JS
 
