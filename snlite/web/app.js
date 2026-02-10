@@ -12,6 +12,128 @@ let attachedImage = { name: null, b64: null };
 let attachedFiles = []; // {name, mime, size, b64}
 
 /* ---------------------------
+   Tooltip Manager (v0.5.2) ✅
+   - render tooltip in <body>
+   - position: fixed
+   - viewport clamped
+---------------------------- */
+function createGlobalTooltip() {
+  let tip = document.querySelector(".snlite-tooltip");
+  if (tip) return tip;
+
+  tip = document.createElement("div");
+  tip.className = "snlite-tooltip";
+  tip.innerHTML = `<div class="content"></div><div class="arrow"></div>`;
+  document.body.appendChild(tip);
+  return tip;
+}
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function positionTooltip(tipEl, targetEl, text) {
+  const contentEl = tipEl.querySelector(".content");
+  contentEl.textContent = text || "";
+
+  // Temporarily show to measure
+  tipEl.style.left = "0px";
+  tipEl.style.top = "0px";
+  tipEl.classList.add("show");
+
+  // Force layout
+  const tRect = targetEl.getBoundingClientRect();
+  const tipRect = tipEl.getBoundingClientRect();
+  const vw = window.innerWidth;
+  const vh = window.innerHeight;
+
+  const pad = 10;
+  const gap = 10;
+
+  // Prefer above; if not enough space, place below
+  const spaceAbove = tRect.top;
+  const spaceBelow = vh - tRect.bottom;
+
+  let placeAbove = true;
+  if (spaceAbove < tipRect.height + gap + 8 && spaceBelow > spaceAbove) {
+    placeAbove = false;
+  }
+
+  // Compute x centered on target
+  let x = tRect.left + tRect.width / 2 - tipRect.width / 2;
+  x = clamp(x, pad, vw - tipRect.width - pad);
+
+  let y;
+  if (placeAbove) {
+    y = tRect.top - tipRect.height - gap;
+  } else {
+    y = tRect.bottom + gap;
+  }
+  y = clamp(y, pad, vh - tipRect.height - pad);
+
+  // Arrow positioning: relative to tooltip box
+  const arrowX = clamp((tRect.left + tRect.width / 2) - x, 14, tipRect.width - 14);
+  tipEl.style.setProperty("--arrow-x", `${arrowX}px`);
+
+  // Arrow direction class
+  tipEl.classList.toggle("arrow-down", placeAbove);
+  tipEl.classList.toggle("arrow-up", !placeAbove);
+
+  tipEl.style.left = `${Math.round(x)}px`;
+  tipEl.style.top = `${Math.round(y)}px`;
+}
+
+function installHelpTooltips() {
+  const tip = createGlobalTooltip();
+  let activeTarget = null;
+  let hideTimer = null;
+
+  const show = (el) => {
+    const text = el.getAttribute("data-tip");
+    if (!text) return;
+    activeTarget = el;
+    if (hideTimer) {
+      clearTimeout(hideTimer);
+      hideTimer = null;
+    }
+    positionTooltip(tip, el, text);
+  };
+
+  const hide = () => {
+    activeTarget = null;
+    tip.classList.remove("show");
+  };
+
+  // Use event delegation
+  document.addEventListener("pointerover", (e) => {
+    const el = e.target && e.target.closest ? e.target.closest(".help") : null;
+    if (!el) return;
+    show(el);
+  });
+
+  document.addEventListener("pointerout", (e) => {
+    const el = e.target && e.target.closest ? e.target.closest(".help") : null;
+    if (!el) return;
+    // small delay prevents flicker
+    hideTimer = setTimeout(() => hide(), 60);
+  });
+
+  window.addEventListener("scroll", () => {
+    if (activeTarget) {
+      const text = activeTarget.getAttribute("data-tip") || "";
+      positionTooltip(tip, activeTarget, text);
+    }
+  }, true);
+
+  window.addEventListener("resize", () => {
+    if (activeTarget) {
+      const text = activeTarget.getAttribute("data-tip") || "";
+      positionTooltip(tip, activeTarget, text);
+    }
+  });
+}
+
+/* ---------------------------
    Safe Markdown render
 ---------------------------- */
 function escapeHtml(s) {
@@ -264,7 +386,6 @@ async function copyTextToClipboard(text) {
     await navigator.clipboard.writeText(t);
     return true;
   } catch {
-    // fallback
     const ta = document.createElement("textarea");
     ta.value = t;
     ta.style.position = "fixed";
@@ -278,7 +399,6 @@ async function copyTextToClipboard(text) {
 }
 
 function toast(msg) {
-  // lightweight: reuse stage badge momentarily
   const old = $("stageBadge").textContent;
   $("stageBadge").textContent = msg;
   setTimeout(() => $("stageBadge").textContent = old, 900);
@@ -320,7 +440,6 @@ function createMessageRow(role, opts = {}) {
 
   roleLine.appendChild(chip);
 
-  // v0.5.1: assistant actions
   if (role === "assistant") {
     const actions = document.createElement("div");
     actions.className = "msg-actions";
@@ -370,7 +489,6 @@ function setMessageContent(contentEl, rawText, bubbleEl = null) {
   if (bubbleEl) bubbleEl.dataset.raw = rawText || "";
 }
 
-/* ---------- Clear UI ---------- */
 function clearUI() {
   $("messages").innerHTML = "";
   maybeAutoScroll(true);
@@ -547,9 +665,7 @@ async function maybeAutoTitle(sessionId) {
     const hasUser = (sess.messages || []).some(m => m.role === "user" && (m.content || "").trim().length > 0);
     if (!hasUser) return;
     await apiPost(`/api/sessions/${sessionId}/auto_title`, {});
-  } catch (e) {
-    console.warn("auto_title failed:", e);
-  }
+  } catch {}
 }
 
 /* ---------- Image attach ---------- */
@@ -647,7 +763,7 @@ function readFileAsBase64(file) {
   });
 }
 
-/* ---------- Copy last & Regenerate (v0.5.1) ---------- */
+/* ---------- Copy last & Regenerate ---------- */
 function updateRegenButtons() {
   const last = getLastAssistantRow();
   const has = !!last;
@@ -666,19 +782,15 @@ async function regenerateLast() {
   if (state.streaming) return;
   if (!state.currentSessionId) return;
 
-  // last assistant row
   const last = getLastAssistantRow();
   if (!last) return;
 
-  // clear workspace if showing
   const showTrace = $("showTrace").checked;
   wsShow(showTrace);
   if (showTrace) wsClear();
 
-  // remove last assistant bubble from UI (we will create a new one)
   last.remove();
 
-  // create a new assistant bubble for regenerated stream
   const assistantMsg = createMessageRow("assistant", { raw: "" });
   setMessageContent(assistantMsg.contentEl, "", assistantMsg.bubble);
 
@@ -689,10 +801,7 @@ async function regenerateLast() {
 
   setStage("Answering…");
 
-  const body = {
-    session_id: state.currentSessionId,
-    show_trace: showTrace,
-  };
+  const body = { session_id: state.currentSessionId, show_trace: showTrace };
 
   const resp = await fetch("/api/chat/regenerate/stream", {
     method: "POST",
@@ -982,27 +1091,10 @@ async function send() {
   }
 }
 
-/* ---------- Regenerate hook ---------- */
-async function stopStreaming() {
-  if (!state.requestId) return;
-  await apiPost("/api/chat/stop", { request_id: state.requestId });
-}
-
-/* ---------- Auto title ---------- */
-async function maybeAutoTitle(sessionId) {
-  try {
-    const sess = await apiGet(`/api/sessions/${sessionId}`);
-    if (!(sess.title === "New Chat" || (sess.title || "").startsWith("New Chat"))) return;
-    const hasUser = (sess.messages || []).some(m => m.role === "user" && (m.content || "").trim().length > 0);
-    if (!hasUser) return;
-    await apiPost(`/api/sessions/${sessionId}/auto_title`, {});
-  } catch (e) {
-    console.warn("auto_title failed:", e);
-  }
-}
-
 /* ---------- Init ---------- */
 async function init() {
+  installHelpTooltips(); // ✅ v0.5.2
+
   $("btnRefresh").onclick = refreshModels;
   $("btnLoad").onclick = loadModel;
   $("btnUnload").onclick = unloadModel;
@@ -1021,7 +1113,6 @@ async function init() {
   $("btnStop").onclick = stopStreaming;
   $("btnClear").onclick = clearUI;
 
-  // v0.5.1 buttons
   $("btnCopyLast").onclick = copyLastAssistant;
   $("btnRegen").onclick = regenerateLast;
 
@@ -1038,7 +1129,7 @@ async function init() {
 
   $("chatScroll").addEventListener("scroll", () => updateUserScrolledFlag());
 
-  $("btnWsClear").onclick = wsClear;
+  $("btnWsClear").onclick = () => $("wsText").textContent = "";
   $("btnWsHide").onclick = () => {
     $("showTrace").checked = false;
     wsShow(false);

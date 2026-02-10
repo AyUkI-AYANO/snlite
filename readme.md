@@ -138,6 +138,22 @@ snlite/
 
 ### Changelog
 
+v0.5.2
+
+Fixed
+
+- Tooltip overflow issue in sidebar and narrow layouts
+
+- Help popups no longer exceed viewport boundaries
+
+- Tooltips remain readable on small screens
+
+Improved
+
+- Tooltip positioning is now viewport-safe
+
+- Long help texts automatically wrap instead of overflowing
+
 v0.5.1
 
 Added
