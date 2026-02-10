@@ -9,7 +9,7 @@ from io import BytesIO
 from typing import Any, Dict, List, Optional, Union, Tuple
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, StreamingResponse, PlainTextResponse
+from fastapi.responses import FileResponse, StreamingResponse, PlainTextResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 import uvicorn
 
@@ -30,7 +30,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="6.0.0")
+app = FastAPI(title="SNLite", version="6.0.1")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -155,6 +155,20 @@ async def sessions_export_md(session_id: str) -> Any:
     if md is None:
         raise HTTPException(status_code=404, detail="session not found")
     return PlainTextResponse(md, media_type="text/markdown; charset=utf-8")
+
+
+@app.get("/api/sessions/{session_id}/export.json")
+async def sessions_export_json(session_id: str) -> Any:
+    sess = store.get_session(session_id)
+    if not sess or sess.title == "__deleted__":
+        raise HTTPException(status_code=404, detail="session not found")
+    return JSONResponse({
+        "id": sess.id,
+        "title": sess.title,
+        "created_at": sess.created_at,
+        "updated_at": sess.updated_at,
+        "messages": sess.messages,
+    })
 
 
 def _clean_title(s: str) -> str:
@@ -347,9 +361,9 @@ def _snip(s: str, n: int) -> str:
     return s[:n].rstrip() + "…"
 
 
-def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
+def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str], Dict[str, Any]]:
     if not files:
-        return "", []
+        return "", [], {"files": [], "total_chars": 0, "truncated": False}
 
     if len(files) > MAX_FILES:
         raise HTTPException(status_code=400, detail=f"Too many files. Max {MAX_FILES}.")
@@ -357,6 +371,8 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
     total_chars = 0
     injected_blocks: List[str] = []
     markers: List[str] = []
+    file_stats: List[Dict[str, Any]] = []
+    total_truncated = False
 
     for f in files:
         name = (f.get("name") or "file").strip()
@@ -386,29 +402,39 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
         except Exception as e:
             injected_blocks.append(f"> [File: {name}] (parse failed: {e})")
             markers.append(f"[File] {name} (parse failed)")
+            file_stats.append({"name": name, "status": "parse_failed", "chars": 0, "truncated": False})
             continue
 
         text = (text or "").strip()
         if not text:
             injected_blocks.append(f"> [File: {name}] (no extractable text)")
             markers.append(f"[File] {name} (empty)")
+            file_stats.append({"name": name, "status": "empty", "chars": 0, "truncated": False})
             continue
 
+        raw_len = len(text)
         text = _snip(text, MAX_EXTRACT_CHARS_PER_FILE)
+        file_truncated = len(text) < raw_len
         if total_chars + len(text) > MAX_TOTAL_EXTRACT_CHARS:
             remain = max(0, MAX_TOTAL_EXTRACT_CHARS - total_chars)
             text = _snip(text, remain) if remain > 0 else ""
+            file_truncated = True
         total_chars += len(text)
+        total_truncated = total_truncated or file_truncated
 
         injected_blocks.append(f"> [File: {name}]\n> " + "\n> ".join(text.splitlines()))
-        markers.append(f"[File] {name}: { _snip(text.replace('\\n',' '), 120) }")
+        trunc_mark = " (truncated)" if file_truncated else ""
+        one_line = _snip(text.replace("\n", " "), 120)
+        markers.append(f"[File] {name}: {one_line} [injected {len(text)} chars{trunc_mark}]")
+        file_stats.append({"name": name, "status": "ok", "chars": len(text), "truncated": file_truncated})
 
         if total_chars >= MAX_TOTAL_EXTRACT_CHARS:
             injected_blocks.append("> [Note] File excerpts truncated due to total limit.")
+            total_truncated = True
             break
 
     injected_text = "\n\n".join(injected_blocks).strip() if injected_blocks else ""
-    return injected_text, markers
+    return injected_text, markers, {"files": file_stats, "total_chars": total_chars, "truncated": total_truncated}
 
 
 def _make_model_user_text(user_text: str, injected_text: str, has_images: bool) -> str:
@@ -435,6 +461,7 @@ async def _stream_chat_common(
     think_mode: str,
     show_trace: bool,
     request_id: str,
+    request_meta: Optional[Dict[str, Any]] = None,
 ):
     loaded_state = await registry.get_state()
     provider = await registry.get_provider()
@@ -470,7 +497,10 @@ async def _stream_chat_common(
 
         try:
             yield f"event: meta\ndata: {json.dumps({'request_id': request_id}, ensure_ascii=False)}\n\n"
+            if request_meta:
+                yield f"event: request_meta\ndata: {json.dumps(request_meta, ensure_ascii=False)}\n\n"
             yield f"event: status\ndata: {json.dumps({'stage': 'answering'}, ensure_ascii=False)}\n\n"
+            started_at = asyncio.get_event_loop().time()
 
             async for chunk in provider.stream_chat(
                 model_id=loaded_model.model_id,
@@ -498,7 +528,8 @@ async def _stream_chat_common(
                     assistant_accum += content
                     yield f"event: content\ndata: {json.dumps({'token': content}, ensure_ascii=False)}\n\n"
 
-            yield f"event: done\ndata: {json.dumps({'done': True, 'cancelled': cancelled()}, ensure_ascii=False)}\n\n"
+            elapsed_ms = int((asyncio.get_event_loop().time() - started_at) * 1000)
+            yield f"event: done\ndata: {json.dumps({'done': True, 'cancelled': cancelled(), 'elapsed_ms': elapsed_ms, 'output_chars': len(assistant_accum)}, ensure_ascii=False)}\n\n"
 
         except Exception as e:
             yield f"event: error\ndata: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
@@ -548,7 +579,7 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
 
     request_id = await registry.new_stream()
 
-    injected_text, file_markers = _parse_files(files)
+    injected_text, file_markers, file_meta = _parse_files(files)
     model_user_text = _make_model_user_text(user_text, injected_text, has_images=bool(images_b64))
 
     # Persist user message (NO raw image b64, but DO store prompt text for regen)
@@ -570,6 +601,7 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
             "params": params,
             "think_mode": think_mode,
             "has_images": bool(images_b64),
+            "file_extract": file_meta,
         }
     })
     store.save_session(sess)
@@ -587,6 +619,7 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
         think_mode=think_mode,
         show_trace=show_trace,
         request_id=request_id,
+        request_meta={"file_extract": file_meta},
     )
 
 
@@ -647,6 +680,7 @@ async def chat_regenerate_stream(payload: Dict[str, Any]) -> Any:
         think_mode=str(think_mode),
         show_trace=show_trace,
         request_id=request_id,
+        request_meta={"regenerate": True},
     )
 
 

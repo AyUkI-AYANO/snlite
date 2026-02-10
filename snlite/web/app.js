@@ -12,10 +12,16 @@ let state = {
   currentSessionId: null,
   streaming: false,
   requestId: null,
+  lastRequestBody: null,
+  chatSearchMatches: [],
+  chatSearchIndex: -1,
 };
 
 let attachedImage = { name: null, b64: null };
 let attachedFiles = []; // {name, mime, size, b64}
+
+const FILE_MAX_BYTES = 6 * 1024 * 1024;
+const FILE_MAX_COUNT = 3;
 
 /* ---------------------------
    Tooltip Manager (v0.5.2) ✅
@@ -477,6 +483,10 @@ function createMessageRow(role, opts = {}) {
   content.innerHTML = renderMarkdownSafe("");
   bubble.appendChild(content);
 
+  const metaLine = document.createElement("div");
+  metaLine.className = "msg-meta";
+  bubble.appendChild(metaLine);
+
   if (role === "assistant") {
     row.appendChild(avatar);
     row.appendChild(bubble);
@@ -487,7 +497,7 @@ function createMessageRow(role, opts = {}) {
 
   $("messages").appendChild(row);
   maybeAutoScroll(true);
-  return { row, bubble, contentEl: content };
+  return { row, bubble, contentEl: content, metaEl: metaLine };
 }
 
 function setMessageContent(contentEl, rawText, bubbleEl = null) {
@@ -497,7 +507,73 @@ function setMessageContent(contentEl, rawText, bubbleEl = null) {
 
 function clearUI() {
   $("messages").innerHTML = "";
+  state.chatSearchMatches = [];
+  state.chatSearchIndex = -1;
+  updateChatSearch();
   maybeAutoScroll(true);
+}
+
+function updateChatSearch() {
+  const q = ($("chatSearch")?.value || "").trim().toLowerCase();
+  const rows = Array.from(document.querySelectorAll(".msg-row"));
+  state.chatSearchMatches = [];
+
+  rows.forEach((row) => {
+    const bubble = row.querySelector(".bubble");
+    if (!bubble) return;
+    bubble.classList.remove("search-hit", "search-active");
+    const raw = (bubble.dataset.raw || "").toLowerCase();
+    if (q && raw.includes(q)) {
+      bubble.classList.add("search-hit");
+      state.chatSearchMatches.push(row);
+    }
+  });
+
+  if (!q || !state.chatSearchMatches.length) {
+    state.chatSearchIndex = -1;
+    $("chatSearchCount").textContent = `0/${state.chatSearchMatches.length}`;
+    return;
+  }
+
+  state.chatSearchIndex = 0;
+  focusChatSearchMatch(0);
+}
+
+function focusChatSearchMatch(nextIndex) {
+  if (!state.chatSearchMatches.length) {
+    $("chatSearchCount").textContent = "0/0";
+    return;
+  }
+  const total = state.chatSearchMatches.length;
+  state.chatSearchIndex = ((nextIndex % total) + total) % total;
+
+  Array.from(document.querySelectorAll(".bubble.search-active")).forEach((el) => el.classList.remove("search-active"));
+  const row = state.chatSearchMatches[state.chatSearchIndex];
+  const bubble = row?.querySelector(".bubble");
+  if (bubble) {
+    bubble.classList.add("search-active");
+    row.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+  $("chatSearchCount").textContent = `${state.chatSearchIndex + 1}/${total}`;
+}
+
+
+function setAssistantMeta(metaEl, data = {}) {
+  if (!metaEl) return;
+  const parts = [];
+  if (data.fileChars > 0) {
+    parts.push(`File context: ${data.fileChars} chars${data.fileTruncated ? " (truncated)" : ""}`);
+  }
+  if (typeof data.elapsedMs === "number") {
+    parts.push(`Elapsed: ${data.elapsedMs} ms`);
+  }
+  if (typeof data.outputChars === "number") {
+    parts.push(`Output: ${data.outputChars} chars`);
+  }
+  if (data.cancelled) {
+    parts.push("Stopped by user");
+  }
+  metaEl.textContent = parts.join(" · ");
 }
 
 /* ---------- Workspace ---------- */
@@ -581,9 +657,11 @@ async function unloadModel() {
 /* ---------- Sessions ---------- */
 async function refreshSessions() {
   const items = await apiGet("/api/sessions");
+  const q = ($("sessionSearch")?.value || "").trim().toLowerCase();
+  const filtered = q ? items.filter((s) => (s.title || "").toLowerCase().includes(q)) : items;
   const container = $("sessions");
   container.innerHTML = "";
-  for (const s of items) {
+  for (const s of filtered) {
     const div = document.createElement("div");
     div.className = "session-item" + (state.currentSessionId === s.id ? " active" : "");
     div.textContent = s.title;
@@ -643,6 +721,24 @@ async function exportSession() {
   URL.revokeObjectURL(a.href);
 }
 
+
+async function exportSessionJson() {
+  if (!state.currentSessionId) return;
+  const url = `/api/sessions/${state.currentSessionId}/export.json`;
+  const r = await fetch(url);
+  if (!r.ok) {
+    alert("Export JSON failed");
+    return;
+  }
+  const data = await r.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `snlite_${state.currentSessionId}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
 async function openSession(sessionId) {
   const sess = await apiGet(`/api/sessions/${sessionId}`);
   clearUI();
@@ -657,6 +753,7 @@ async function openSession(sessionId) {
   }
   maybeAutoScroll(true);
   updateRegenButtons();
+  updateChatSearch();
 }
 
 async function stopStreaming() {
@@ -717,6 +814,12 @@ function renderFileList() {
   box.style.display = "flex";
   box.innerHTML = "";
 
+  const enabledCount = attachedFiles.filter((f) => f.enabled !== false).length;
+  const stat = document.createElement("div");
+  stat.className = "hint file-stat";
+  stat.textContent = `Enabled ${enabledCount}/${attachedFiles.length} files. Max ${FILE_MAX_COUNT} files, each <= 6MB.`;
+  box.appendChild(stat);
+
   attachedFiles.forEach((f, idx) => {
     const item = document.createElement("div");
     item.className = "file-item";
@@ -730,10 +833,22 @@ function renderFileList() {
 
     const sub = document.createElement("div");
     sub.className = "file-sub";
-    sub.textContent = `${f.mime || "unknown"} · ${humanSize(f.size)}`;
+    const status = f.enabled === false ? "disabled" : "enabled";
+    sub.textContent = `${f.mime || "unknown"} · ${humanSize(f.size)} · ${status}`;
 
     meta.appendChild(name);
     meta.appendChild(sub);
+
+    const actions = document.createElement("div");
+    actions.className = "file-actions";
+
+    const toggle = document.createElement("button");
+    toggle.className = "file-remove";
+    toggle.textContent = f.enabled === false ? "Enable" : "Disable";
+    toggle.onclick = () => {
+      attachedFiles[idx].enabled = !(attachedFiles[idx].enabled !== false);
+      renderFileList();
+    };
 
     const btn = document.createElement("button");
     btn.className = "file-remove";
@@ -743,8 +858,10 @@ function renderFileList() {
       renderFileList();
     };
 
+    actions.appendChild(toggle);
+    actions.appendChild(btn);
     item.appendChild(meta);
-    item.appendChild(btn);
+    item.appendChild(actions);
     box.appendChild(item);
   });
 }
@@ -775,6 +892,20 @@ function updateRegenButtons() {
   const has = !!last;
   $("btnCopyLast").disabled = !has || state.streaming;
   $("btnRegen").disabled = !has || state.streaming;
+  $("btnRetry").disabled = state.streaming || (!has && !state.lastRequestBody);
+}
+
+async function retryLastRequest() {
+  if (state.streaming) return;
+  const last = getLastAssistantRow();
+  if (last) {
+    await regenerateLast();
+    return;
+  }
+  if (state.lastRequestBody?.user_text) {
+    $("input").value = state.lastRequestBody.user_text;
+    await send();
+  }
 }
 
 async function copyLastAssistant() {
@@ -830,6 +961,7 @@ async function regenerateLast() {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let assistantRaw = "";
+  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false };
 
   updateUserScrolledFlag();
   if (!userScrolledUp) maybeAutoScroll(true);
@@ -859,6 +991,18 @@ async function regenerateLast() {
           try { state.requestId = JSON.parse(dataLine).request_id; } catch {}
           continue;
         }
+
+        if (eventType === "request_meta") {
+          try {
+            const obj = JSON.parse(dataLine);
+            const fx = obj.file_extract || {};
+            streamMeta.fileChars = Number(fx.total_chars || 0);
+            streamMeta.fileTruncated = !!fx.truncated;
+            setAssistantMeta(assistantMsg.metaEl, streamMeta);
+          } catch {}
+          continue;
+        }
+
 
         if (eventType === "status") {
           try {
@@ -901,6 +1045,17 @@ async function regenerateLast() {
         }
 
         if (eventType === "done") {
+          try {
+            const obj = JSON.parse(dataLine);
+            streamMeta.elapsedMs = obj.elapsed_ms;
+            streamMeta.outputChars = obj.output_chars;
+            streamMeta.cancelled = !!obj.cancelled;
+            if (obj.cancelled) {
+              assistantRaw += "\n\n[Generation stopped by user]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            }
+            setAssistantMeta(assistantMsg.metaEl, streamMeta);
+          } catch {}
           setStage("Idle");
           maybeAutoScroll(false);
           continue;
@@ -917,6 +1072,7 @@ async function regenerateLast() {
     await refreshSessions();
     updateRegenButtons();
     maybeAutoScroll(false);
+    updateChatSearch();
   }
 }
 
@@ -932,15 +1088,16 @@ async function send() {
   const input = $("input");
   const text = input.value.trim();
 
-  if (!text && !attachedImage.b64 && attachedFiles.length === 0) return;
+  if (!text && !attachedImage.b64 && attachedFiles.filter((f) => f.enabled !== false).length === 0) return;
 
   let userDisplay = text;
   if (attachedImage.b64) {
     const marker = attachedImage.name ? `[Image] ${attachedImage.name}` : "[Image]";
     userDisplay = userDisplay ? `${marker}\n${userDisplay}` : marker;
   }
+  const enabledFiles = attachedFiles.filter((f) => f.enabled !== false);
   if (attachedFiles.length) {
-    const fileMarkers = attachedFiles.map(f => `[File] ${f.name} (${humanSize(f.size)})`).join("\n");
+    const fileMarkers = attachedFiles.map(f => `[File] ${f.name} (${humanSize(f.size)})${f.enabled === false ? " [disabled]" : ""}`).join("\n");
     userDisplay = userDisplay ? `${fileMarkers}\n${userDisplay}` : fileMarkers;
   }
 
@@ -965,7 +1122,7 @@ async function send() {
 
   const thinkMode = $("thinkMode").value;
 
-  const filesPayload = attachedFiles.map(f => ({
+  const filesPayload = enabledFiles.map(f => ({
     name: f.name,
     mime: f.mime,
     b64: f.b64,
@@ -982,6 +1139,8 @@ async function send() {
     image_name: attachedImage.name || "",
     files: filesPayload,
   };
+
+  state.lastRequestBody = JSON.parse(JSON.stringify(body));
 
   clearAttachedImage();
   clearAttachedFiles();
@@ -1006,6 +1165,7 @@ async function send() {
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
   let assistantRaw = "";
+  const streamMeta = { fileChars: 0, fileTruncated: false, elapsedMs: null, outputChars: null, cancelled: false };
 
   updateUserScrolledFlag();
   if (!userScrolledUp) maybeAutoScroll(true);
@@ -1033,6 +1193,17 @@ async function send() {
 
         if (eventType === "meta") {
           try { state.requestId = JSON.parse(dataLine).request_id; } catch {}
+          continue;
+        }
+
+        if (eventType === "request_meta") {
+          try {
+            const obj = JSON.parse(dataLine);
+            const fx = obj.file_extract || {};
+            streamMeta.fileChars = Number(fx.total_chars || 0);
+            streamMeta.fileTruncated = !!fx.truncated;
+            setAssistantMeta(assistantMsg.metaEl, streamMeta);
+          } catch {}
           continue;
         }
 
@@ -1077,6 +1248,17 @@ async function send() {
         }
 
         if (eventType === "done") {
+          try {
+            const obj = JSON.parse(dataLine);
+            streamMeta.elapsedMs = obj.elapsed_ms;
+            streamMeta.outputChars = obj.output_chars;
+            streamMeta.cancelled = !!obj.cancelled;
+            if (obj.cancelled) {
+              assistantRaw += "\n\n[Generation stopped by user]";
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+            }
+            setAssistantMeta(assistantMsg.metaEl, streamMeta);
+          } catch {}
           setStage("Idle");
           maybeAutoScroll(false);
           continue;
@@ -1094,6 +1276,7 @@ async function send() {
     await refreshSessions();
     updateRegenButtons();
     maybeAutoScroll(false);
+    updateChatSearch();
   }
 }
 
@@ -1114,6 +1297,7 @@ async function init() {
   $("btnRenameSession").onclick = renameSession;
   $("btnDeleteSession").onclick = deleteSession;
   $("btnExport").onclick = exportSession;
+  $("btnExportJson").onclick = exportSessionJson;
 
   $("btnSend").onclick = send;
   $("btnStop").onclick = stopStreaming;
@@ -1121,6 +1305,7 @@ async function init() {
 
   $("btnCopyLast").onclick = copyLastAssistant;
   $("btnRegen").onclick = regenerateLast;
+  $("btnRetry").onclick = retryLastRequest;
 
   $("temperature").oninput = updateParamLabels;
   $("top_p").oninput = updateParamLabels;
@@ -1134,6 +1319,10 @@ async function init() {
   });
 
   $("chatScroll").addEventListener("scroll", () => updateUserScrolledFlag());
+  $("chatSearch").addEventListener("input", () => updateChatSearch());
+  $("btnSearchNext").onclick = () => focusChatSearchMatch(state.chatSearchIndex + 1);
+  $("btnSearchPrev").onclick = () => focusChatSearchMatch(state.chatSearchIndex - 1);
+  $("sessionSearch").addEventListener("input", () => refreshSessions());
 
   $("btnWsClear").onclick = () => $("wsText").textContent = "";
   $("btnWsHide").onclick = () => {
@@ -1176,15 +1365,12 @@ async function init() {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    const MAX_FILES = 3;
-    const MAX_BYTES = 6 * 1024 * 1024;
-
     for (const f of files) {
-      if (attachedFiles.length >= MAX_FILES) {
-        alert(`Max ${MAX_FILES} files allowed.`);
+      if (attachedFiles.length >= FILE_MAX_COUNT) {
+        alert(`Max ${FILE_MAX_COUNT} files allowed.`);
         break;
       }
-      if (f.size > MAX_BYTES) {
+      if (f.size > FILE_MAX_BYTES) {
         alert(`File too large (max 6MB): ${f.name}`);
         continue;
       }
@@ -1195,6 +1381,7 @@ async function init() {
         mime: f.type || "",
         size: f.size,
         b64,
+        enabled: true,
       });
     }
 
@@ -1203,6 +1390,8 @@ async function init() {
   });
 
   wsShow(false);
+  state.lastRequestBody = JSON.parse(JSON.stringify(body));
+
   clearAttachedImage();
   clearAttachedFiles();
 
@@ -1213,6 +1402,7 @@ async function init() {
   userScrolledUp = false;
   maybeAutoScroll(true);
   updateRegenButtons();
+  updateChatSearch();
 }
 
 init().catch(err => {

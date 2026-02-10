@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>SNLite v6.0</title>
-  <link rel="stylesheet" href="/static/style.css?v=6.0.0" />
+  <title>SNLite v6.0.1</title>
+  <link rel="stylesheet" href="/static/style.css?v=6.0.1" />
 </head>
 <body>
   <div class="app">
@@ -14,7 +14,7 @@
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v6.0 · Local GenAI</div>
+          <div class="sub">v6.0.1 · Local GenAI</div>
         </div>
       </div>
 
@@ -49,7 +49,11 @@
         </div>
         <div id="sessions" class="sessions"></div>
         <div class="row">
+          <input id="sessionSearch" placeholder="Search sessions..." />
+        </div>
+        <div class="row">
           <button id="btnExport">Export .md</button>
+          <button id="btnExportJson">Export .json</button>
         </div>
       </section>
 
@@ -154,8 +158,15 @@
           <div class="pill subtle" id="stageBadge">Idle</div>
         </div>
         <div class="top-right">
+          <div class="search-inline">
+            <input id="chatSearch" placeholder="Search in chat..." />
+            <button id="btnSearchPrev" title="Previous match">↑</button>
+            <button id="btnSearchNext" title="Next match">↓</button>
+            <span id="chatSearchCount" class="hint">0/0</span>
+          </div>
           <button id="btnCopyLast" title="Copy last assistant message">Copy last</button>
           <button id="btnRegen" title="Regenerate last assistant message">Regenerate</button>
+          <button id="btnRetry" title="Retry last failed request">Retry</button>
           <button id="btnStop" class="danger" disabled>Stop</button>
           <button id="btnClear" title="Clear UI (does not delete session)">Clear UI</button>
         </div>
@@ -226,6 +237,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=6.0.0"></script>
+  <script src="/static/app.js?v=6.0.1"></script>
 </body>
 </html>

@@ -138,6 +138,20 @@ snlite/
 
 ### Changelog
 
+v6.0.1
+
+Added
+
+- Session list search and in-chat keyword navigation
+- Session export to JSON (.json)
+- Attachment enable/disable toggle and injection stats
+- Better streaming completion metadata (elapsed/output chars)
+
+Improved
+
+- Stop generation now marks message as cancelled
+- Retry flow and error recovery UX polish
+
 v6.0.0
 
 Change
