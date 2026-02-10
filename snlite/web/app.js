@@ -8,14 +8,11 @@ let state = {
   requestId: null,
 };
 
-// image attachment
 let attachedImage = { name: null, b64: null };
-
-// file attachments (v0.5.0)
 let attachedFiles = []; // {name, mime, size, b64}
 
 /* ---------------------------
-   Safe Markdown render (from v0.4.2)
+   Safe Markdown render
 ---------------------------- */
 function escapeHtml(s) {
   return (s || "")
@@ -131,7 +128,7 @@ function renderMarkdownSafe(text) {
 }
 
 /* ---------------------------
-   Auto-scroll (v0.5.0)
+   Auto-scroll
 ---------------------------- */
 let userScrolledUp = false;
 
@@ -153,32 +150,14 @@ function maybeAutoScroll(force = false) {
     el.scrollTop = el.scrollHeight;
     return;
   }
-  // only auto scroll when user hasn't scrolled up
   if (!userScrolledUp) {
     el.scrollTop = el.scrollHeight;
   }
 }
 
-/* --------------------------- */
-
-function paramsFromUI() {
-  return {
-    temperature: parseFloat($("temperature").value),
-    top_p: parseFloat($("top_p").value),
-    num_predict: parseInt($("num_predict").value, 10),
-    repeat_penalty: parseFloat($("repeat_penalty").value),
-  };
-}
-
-function updateParamLabels() {
-  $("tempVal").textContent = $("temperature").value;
-  $("topPVal").textContent = $("top_p").value;
-}
-
-function setStage(text) {
-  $("stageBadge").textContent = text || "Idle";
-}
-
+/* ---------------------------
+   API
+---------------------------- */
 async function apiGet(url) {
   const r = await fetch(url);
   if (!r.ok) throw new Error(await r.text());
@@ -209,6 +188,27 @@ async function apiDelete(url) {
   const r = await fetch(url, { method: "DELETE" });
   if (!r.ok) throw new Error(await r.text());
   return r.json();
+}
+
+/* ---------------------------
+   UI helpers
+---------------------------- */
+function paramsFromUI() {
+  return {
+    temperature: parseFloat($("temperature").value),
+    top_p: parseFloat($("top_p").value),
+    num_predict: parseInt($("num_predict").value, 10),
+    repeat_penalty: parseFloat($("repeat_penalty").value),
+  };
+}
+
+function updateParamLabels() {
+  $("tempVal").textContent = $("temperature").value;
+  $("topPVal").textContent = $("top_p").value;
+}
+
+function setStage(text) {
+  $("stageBadge").textContent = text || "Idle";
 }
 
 function setModelStatus(text) {
@@ -254,8 +254,52 @@ function syncThinkModeOptions() {
   }
 }
 
-/* ---------- Message UI (v0.5.0) ---------- */
-function createMessageRow(role) {
+/* ---------------------------
+   Copy helpers (v0.5.1)
+---------------------------- */
+async function copyTextToClipboard(text) {
+  const t = (text || "").toString();
+  if (!t.trim()) return false;
+  try {
+    await navigator.clipboard.writeText(t);
+    return true;
+  } catch {
+    // fallback
+    const ta = document.createElement("textarea");
+    ta.value = t;
+    ta.style.position = "fixed";
+    ta.style.left = "-9999px";
+    document.body.appendChild(ta);
+    ta.select();
+    const ok = document.execCommand("copy");
+    document.body.removeChild(ta);
+    return ok;
+  }
+}
+
+function toast(msg) {
+  // lightweight: reuse stage badge momentarily
+  const old = $("stageBadge").textContent;
+  $("stageBadge").textContent = msg;
+  setTimeout(() => $("stageBadge").textContent = old, 900);
+}
+
+function getLastAssistantRow() {
+  const rows = Array.from(document.querySelectorAll(".msg-row.assistant"));
+  return rows.length ? rows[rows.length - 1] : null;
+}
+
+function getRawFromAssistantRow(row) {
+  if (!row) return "";
+  const bubble = row.querySelector(".bubble.assistant");
+  if (!bubble) return "";
+  return bubble.dataset.raw || "";
+}
+
+/* ---------------------------
+   Message UI
+---------------------------- */
+function createMessageRow(role, opts = {}) {
   const row = document.createElement("div");
   row.className = `msg-row ${role}`;
 
@@ -265,6 +309,7 @@ function createMessageRow(role) {
 
   const bubble = document.createElement("div");
   bubble.className = `bubble ${role}`;
+  bubble.dataset.raw = (opts.raw || "");
 
   const roleLine = document.createElement("div");
   roleLine.className = "role-line";
@@ -274,6 +319,32 @@ function createMessageRow(role) {
   chip.textContent = role === "assistant" ? "Assistant" : "You";
 
   roleLine.appendChild(chip);
+
+  // v0.5.1: assistant actions
+  if (role === "assistant") {
+    const actions = document.createElement("div");
+    actions.className = "msg-actions";
+
+    const btnCopy = document.createElement("button");
+    btnCopy.className = "msg-action";
+    btnCopy.textContent = "Copy";
+    btnCopy.onclick = async () => {
+      const ok = await copyTextToClipboard(bubble.dataset.raw || "");
+      toast(ok ? "Copied" : "Copy failed");
+    };
+
+    const btnRegen = document.createElement("button");
+    btnRegen.className = "msg-action primary";
+    btnRegen.textContent = "Regenerate";
+    btnRegen.onclick = async () => {
+      await regenerateLast();
+    };
+
+    actions.appendChild(btnCopy);
+    actions.appendChild(btnRegen);
+    roleLine.appendChild(actions);
+  }
+
   bubble.appendChild(roleLine);
 
   const content = document.createElement("div");
@@ -294,8 +365,9 @@ function createMessageRow(role) {
   return { row, bubble, contentEl: content };
 }
 
-function setMessageContent(contentEl, rawText) {
+function setMessageContent(contentEl, rawText, bubbleEl = null) {
   contentEl.innerHTML = renderMarkdownSafe(rawText);
+  if (bubbleEl) bubbleEl.dataset.raw = rawText || "";
 }
 
 /* ---------- Clear UI ---------- */
@@ -305,10 +377,7 @@ function clearUI() {
 }
 
 /* ---------- Workspace ---------- */
-function wsClear() {
-  $("wsText").textContent = "";
-}
-
+function wsClear() { $("wsText").textContent = ""; }
 function wsShow(show) {
   const ws = $("workspace");
   if (show) ws.classList.remove("hidden");
@@ -455,14 +524,15 @@ async function openSession(sessionId) {
   clearUI();
   for (const m of sess.messages) {
     if (m.role === "user") {
-      const msg = createMessageRow("user");
-      setMessageContent(msg.contentEl, m.content);
+      const msg = createMessageRow("user", { raw: m.content });
+      setMessageContent(msg.contentEl, m.content, msg.bubble);
     } else if (m.role === "assistant") {
-      const msg = createMessageRow("assistant");
-      setMessageContent(msg.contentEl, m.content);
+      const msg = createMessageRow("assistant", { raw: m.content });
+      setMessageContent(msg.contentEl, m.content, msg.bubble);
     }
   }
   maybeAutoScroll(true);
+  updateRegenButtons();
 }
 
 async function stopStreaming() {
@@ -505,7 +575,7 @@ function setAttachedImage(name, dataUrl) {
   $("imagePreview").src = dataUrl;
 }
 
-/* ---------- File attach (v0.5.0) ---------- */
+/* ---------- File attach ---------- */
 function humanSize(bytes) {
   const b = Number(bytes || 0);
   if (b < 1024) return `${b} B`;
@@ -577,74 +647,54 @@ function readFileAsBase64(file) {
   });
 }
 
-/* ---------- Send ---------- */
-async function send() {
+/* ---------- Copy last & Regenerate (v0.5.1) ---------- */
+function updateRegenButtons() {
+  const last = getLastAssistantRow();
+  const has = !!last;
+  $("btnCopyLast").disabled = !has || state.streaming;
+  $("btnRegen").disabled = !has || state.streaming;
+}
+
+async function copyLastAssistant() {
+  const last = getLastAssistantRow();
+  if (!last) return;
+  const ok = await copyTextToClipboard(getRawFromAssistantRow(last));
+  toast(ok ? "Copied" : "Copy failed");
+}
+
+async function regenerateLast() {
   if (state.streaming) return;
-  if (!state.currentSessionId) await newSession();
-  if (!state.loaded) {
-    alert("Please load a model first.");
-    return;
-  }
+  if (!state.currentSessionId) return;
 
-  const input = $("input");
-  const text = input.value.trim();
+  // last assistant row
+  const last = getLastAssistantRow();
+  if (!last) return;
 
-  if (!text && !attachedImage.b64 && attachedFiles.length === 0) return;
-
-  // show user bubble (with markers)
-  let userDisplay = text;
-  if (attachedImage.b64) {
-    const marker = attachedImage.name ? `[Image] ${attachedImage.name}` : "[Image]";
-    userDisplay = userDisplay ? `${marker}\n${userDisplay}` : marker;
-  }
-  if (attachedFiles.length) {
-    const fileMarkers = attachedFiles.map(f => `[File] ${f.name} (${humanSize(f.size)})`).join("\n");
-    userDisplay = userDisplay ? `${fileMarkers}\n${userDisplay}` : fileMarkers;
-  }
-
-  const userMsg = createMessageRow("user");
-  setMessageContent(userMsg.contentEl, userDisplay);
-
-  input.value = "";
-
-  const assistantMsg = createMessageRow("assistant");
-  setMessageContent(assistantMsg.contentEl, "");
-
-  state.streaming = true;
-  $("btnSend").disabled = true;
-  $("btnStop").disabled = false;
-
+  // clear workspace if showing
   const showTrace = $("showTrace").checked;
   wsShow(showTrace);
   if (showTrace) wsClear();
 
+  // remove last assistant bubble from UI (we will create a new one)
+  last.remove();
+
+  // create a new assistant bubble for regenerated stream
+  const assistantMsg = createMessageRow("assistant", { raw: "" });
+  setMessageContent(assistantMsg.contentEl, "", assistantMsg.bubble);
+
+  state.streaming = true;
+  $("btnSend").disabled = true;
+  $("btnStop").disabled = false;
+  updateRegenButtons();
+
   setStage("Answering…");
-
-  const thinkMode = $("thinkMode").value;
-
-  const filesPayload = attachedFiles.map(f => ({
-    name: f.name,
-    mime: f.mime,
-    b64: f.b64,
-  }));
 
   const body = {
     session_id: state.currentSessionId,
-    user_text: text,
-    system_text: $("systemText").value || "",
-    params: paramsFromUI(),
-    think_mode: thinkMode,
     show_trace: showTrace,
-    images_b64: attachedImage.b64 ? [attachedImage.b64] : [],
-    image_name: attachedImage.name || "",
-    files: filesPayload,
   };
 
-  // one-shot attachments
-  clearAttachedImage();
-  clearAttachedFiles();
-
-  const resp = await fetch("/api/chat/stream", {
+  const resp = await fetch("/api/chat/regenerate/stream", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -655,17 +705,17 @@ async function send() {
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
     setStage("Idle");
-    setMessageContent(assistantMsg.contentEl, `Error: ${await resp.text()}`);
+    const err = await resp.text();
+    setMessageContent(assistantMsg.contentEl, `Error: ${err}`, assistantMsg.bubble);
+    updateRegenButtons();
     return;
   }
 
   const reader = resp.body.getReader();
   const decoder = new TextDecoder("utf-8");
   let buffer = "";
-
   let assistantRaw = "";
 
-  // During streaming: if user is near bottom at start, keep autoscroll
   updateUserScrolledFlag();
   if (!userScrolledUp) maybeAutoScroll(true);
 
@@ -721,7 +771,7 @@ async function send() {
             const obj = JSON.parse(dataLine);
             if (obj.token) {
               assistantRaw += obj.token;
-              setMessageContent(assistantMsg.contentEl, assistantRaw);
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
               maybeAutoScroll(false);
             }
           } catch {}
@@ -730,7 +780,183 @@ async function send() {
 
         if (eventType === "error") {
           assistantRaw += `\n[Error] ${dataLine}`;
-          setMessageContent(assistantMsg.contentEl, assistantRaw);
+          setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+          maybeAutoScroll(false);
+          continue;
+        }
+
+        if (eventType === "done") {
+          setStage("Idle");
+          maybeAutoScroll(false);
+          continue;
+        }
+      }
+    }
+  } finally {
+    state.streaming = false;
+    $("btnSend").disabled = false;
+    $("btnStop").disabled = true;
+    state.requestId = null;
+    setStage("Idle");
+
+    await refreshSessions();
+    updateRegenButtons();
+    maybeAutoScroll(false);
+  }
+}
+
+/* ---------- Send ---------- */
+async function send() {
+  if (state.streaming) return;
+  if (!state.currentSessionId) await newSession();
+  if (!state.loaded) {
+    alert("Please load a model first.");
+    return;
+  }
+
+  const input = $("input");
+  const text = input.value.trim();
+
+  if (!text && !attachedImage.b64 && attachedFiles.length === 0) return;
+
+  let userDisplay = text;
+  if (attachedImage.b64) {
+    const marker = attachedImage.name ? `[Image] ${attachedImage.name}` : "[Image]";
+    userDisplay = userDisplay ? `${marker}\n${userDisplay}` : marker;
+  }
+  if (attachedFiles.length) {
+    const fileMarkers = attachedFiles.map(f => `[File] ${f.name} (${humanSize(f.size)})`).join("\n");
+    userDisplay = userDisplay ? `${fileMarkers}\n${userDisplay}` : fileMarkers;
+  }
+
+  const userMsg = createMessageRow("user", { raw: userDisplay });
+  setMessageContent(userMsg.contentEl, userDisplay, userMsg.bubble);
+
+  input.value = "";
+
+  const assistantMsg = createMessageRow("assistant", { raw: "" });
+  setMessageContent(assistantMsg.contentEl, "", assistantMsg.bubble);
+
+  state.streaming = true;
+  $("btnSend").disabled = true;
+  $("btnStop").disabled = false;
+  updateRegenButtons();
+
+  const showTrace = $("showTrace").checked;
+  wsShow(showTrace);
+  if (showTrace) wsClear();
+
+  setStage("Answering…");
+
+  const thinkMode = $("thinkMode").value;
+
+  const filesPayload = attachedFiles.map(f => ({
+    name: f.name,
+    mime: f.mime,
+    b64: f.b64,
+  }));
+
+  const body = {
+    session_id: state.currentSessionId,
+    user_text: text,
+    system_text: $("systemText").value || "",
+    params: paramsFromUI(),
+    think_mode: thinkMode,
+    show_trace: showTrace,
+    images_b64: attachedImage.b64 ? [attachedImage.b64] : [],
+    image_name: attachedImage.name || "",
+    files: filesPayload,
+  };
+
+  clearAttachedImage();
+  clearAttachedFiles();
+
+  const resp = await fetch("/api/chat/stream", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+
+  if (!resp.ok) {
+    state.streaming = false;
+    $("btnSend").disabled = false;
+    $("btnStop").disabled = true;
+    setStage("Idle");
+    setMessageContent(assistantMsg.contentEl, `Error: ${await resp.text()}`, assistantMsg.bubble);
+    updateRegenButtons();
+    return;
+  }
+
+  const reader = resp.body.getReader();
+  const decoder = new TextDecoder("utf-8");
+  let buffer = "";
+  let assistantRaw = "";
+
+  updateUserScrolledFlag();
+  if (!userScrolledUp) maybeAutoScroll(true);
+
+  try {
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buffer += decoder.decode(value, { stream: true });
+
+      let idx;
+      while ((idx = buffer.indexOf("\n\n")) !== -1) {
+        const frame = buffer.slice(0, idx);
+        buffer = buffer.slice(idx + 2);
+
+        const lines = frame.split("\n").map(l => l.trimEnd());
+        let eventType = "message";
+        let dataLine = null;
+
+        for (const l of lines) {
+          if (l.startsWith("event:")) eventType = l.slice(6).trim();
+          if (l.startsWith("data:")) dataLine = l.slice(5).trim();
+        }
+        if (!dataLine) continue;
+
+        if (eventType === "meta") {
+          try { state.requestId = JSON.parse(dataLine).request_id; } catch {}
+          continue;
+        }
+
+        if (eventType === "status") {
+          try {
+            const s = JSON.parse(dataLine);
+            if (s.stage === "thinking") setStage("Thinking…");
+            if (s.stage === "answering") setStage("Answering…");
+          } catch {}
+          continue;
+        }
+
+        if (eventType === "thinking") {
+          if (!$("showTrace").checked) continue;
+          try {
+            const obj = JSON.parse(dataLine);
+            if (obj.token) {
+              $("wsText").textContent += obj.token;
+              $("wsText").scrollTop = $("wsText").scrollHeight;
+            }
+          } catch {}
+          continue;
+        }
+
+        if (eventType === "content") {
+          try {
+            const obj = JSON.parse(dataLine);
+            if (obj.token) {
+              assistantRaw += obj.token;
+              setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
+              maybeAutoScroll(false);
+            }
+          } catch {}
+          continue;
+        }
+
+        if (eventType === "error") {
+          assistantRaw += `\n[Error] ${dataLine}`;
+          setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
           maybeAutoScroll(false);
           continue;
         }
@@ -751,9 +977,27 @@ async function send() {
 
     await maybeAutoTitle(state.currentSessionId);
     await refreshSessions();
-
-    // When done, snap to bottom only if user didn't scroll up
+    updateRegenButtons();
     maybeAutoScroll(false);
+  }
+}
+
+/* ---------- Regenerate hook ---------- */
+async function stopStreaming() {
+  if (!state.requestId) return;
+  await apiPost("/api/chat/stop", { request_id: state.requestId });
+}
+
+/* ---------- Auto title ---------- */
+async function maybeAutoTitle(sessionId) {
+  try {
+    const sess = await apiGet(`/api/sessions/${sessionId}`);
+    if (!(sess.title === "New Chat" || (sess.title || "").startsWith("New Chat"))) return;
+    const hasUser = (sess.messages || []).some(m => m.role === "user" && (m.content || "").trim().length > 0);
+    if (!hasUser) return;
+    await apiPost(`/api/sessions/${sessionId}/auto_title`, {});
+  } catch (e) {
+    console.warn("auto_title failed:", e);
   }
 }
 
@@ -766,7 +1010,6 @@ async function init() {
   $("providerSelect").onchange = async (e) => {
     await refreshModelListForProvider(e.target.value);
   };
-
   $("modelSelect").onchange = () => syncThinkModeOptions();
 
   $("btnNewSession").onclick = newSession;
@@ -777,6 +1020,10 @@ async function init() {
   $("btnSend").onclick = send;
   $("btnStop").onclick = stopStreaming;
   $("btnClear").onclick = clearUI;
+
+  // v0.5.1 buttons
+  $("btnCopyLast").onclick = copyLastAssistant;
+  $("btnRegen").onclick = regenerateLast;
 
   $("temperature").oninput = updateParamLabels;
   $("top_p").oninput = updateParamLabels;
@@ -789,12 +1036,8 @@ async function init() {
     }
   });
 
-  // chat scroll listener (auto-scroll pause detection)
-  $("chatScroll").addEventListener("scroll", () => {
-    updateUserScrolledFlag();
-  });
+  $("chatScroll").addEventListener("scroll", () => updateUserScrolledFlag());
 
-  // workspace controls
   $("btnWsClear").onclick = wsClear;
   $("btnWsHide").onclick = () => {
     $("showTrace").checked = false;
@@ -802,16 +1045,14 @@ async function init() {
   };
   $("showTrace").onchange = () => wsShow($("showTrace").checked);
 
-  // auto-scroll toggle
   $("autoScroll").onchange = () => {
-    // if turning on, snap to bottom
     if ($("autoScroll").checked) {
       userScrolledUp = false;
       maybeAutoScroll(true);
     }
   };
 
-  // Image attach
+  // Image
   $("btnAttach").onclick = () => $("imageFile").click();
   $("btnRemoveImage").onclick = clearAttachedImage;
   $("imageFile").addEventListener("change", (e) => {
@@ -832,13 +1073,12 @@ async function init() {
     reader.readAsDataURL(file);
   });
 
-  // Files attach (v0.5.0)
+  // Files
   $("btnAttachFiles").onclick = () => $("docFiles").click();
   $("docFiles").addEventListener("change", async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
 
-    // cap to MAX_FILES total
     const MAX_FILES = 3;
     const MAX_BYTES = 6 * 1024 * 1024;
 
@@ -862,7 +1102,6 @@ async function init() {
     }
 
     renderFileList();
-    // reset input so selecting same file again triggers change
     $("docFiles").value = "";
   });
 
@@ -874,9 +1113,9 @@ async function init() {
   await refreshModels();
   await refreshSessions();
 
-  // initial scroll state
   userScrolledUp = false;
   maybeAutoScroll(true);
+  updateRegenButtons();
 }
 
 init().catch(err => {

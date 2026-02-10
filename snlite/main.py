@@ -17,7 +17,6 @@ from snlite.registry import AppRegistry
 from snlite.store import SessionStore
 from snlite.providers.ollama import OllamaProvider
 
-# File parsing deps
 from docx import Document
 from pypdf import PdfReader
 
@@ -26,13 +25,12 @@ SNLITE_PORT = int(os.getenv("SNLITE_PORT", "8000"))
 OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://127.0.0.1:11434")
 SNLITE_DATA_DIR = os.getenv("SNLITE_DATA_DIR", os.path.join(os.getcwd(), "data"))
 
-# Limits (lightweight & safe)
 MAX_FILES = 3
-MAX_FILE_BYTES = 6 * 1024 * 1024  # 6MB each
+MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="0.5.0")
+app = FastAPI(title="SNLite", version="0.5.1")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -302,7 +300,6 @@ def _resolve_think_value(model_id: str, think_mode: str) -> Optional[Union[bool,
 
 
 def _safe_b64_to_bytes(b64: str) -> bytes:
-    # Accept base64 without data URL prefix
     try:
         return base64.b64decode(b64, validate=False)
     except Exception as e:
@@ -313,8 +310,7 @@ def _extract_text_pdf(data: bytes) -> str:
     bio = BytesIO(data)
     reader = PdfReader(bio)
     out_parts = []
-    # Keep it lightweight: first up to 20 pages
-    for i, page in enumerate(reader.pages[:20]):
+    for page in reader.pages[:20]:
         try:
             t = page.extract_text() or ""
         except Exception:
@@ -323,8 +319,7 @@ def _extract_text_pdf(data: bytes) -> str:
             out_parts.append(t)
         if sum(len(x) for x in out_parts) > MAX_EXTRACT_CHARS_PER_FILE:
             break
-    text = "\n\n".join(out_parts).strip()
-    return text
+    return "\n\n".join(out_parts).strip()
 
 
 def _extract_text_docx(data: bytes) -> str:
@@ -339,7 +334,6 @@ def _extract_text_docx(data: bytes) -> str:
 
 
 def _extract_text_plain(data: bytes) -> str:
-    # best-effort utf-8, then fallback latin-1
     try:
         return data.decode("utf-8", errors="ignore").strip()
     except Exception:
@@ -354,11 +348,6 @@ def _snip(s: str, n: int) -> str:
 
 
 def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
-    """
-    Returns:
-      - injected_text: text to append into user message (quoted)
-      - markers: list of short markers for session history (no raw text)
-    """
     if not files:
         return "", []
 
@@ -375,6 +364,7 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
         b64 = f.get("b64")
         if not isinstance(b64, str) or not b64:
             raise HTTPException(status_code=400, detail=f"File {name} missing b64")
+
         data = _safe_b64_to_bytes(b64)
         if len(data) > MAX_FILE_BYTES:
             raise HTTPException(status_code=400, detail=f"File too large: {name} (max {MAX_FILE_BYTES//1024//1024}MB)")
@@ -390,12 +380,10 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
             elif ext in (".txt", ".md") or mime.startswith("text/"):
                 text = _extract_text_plain(data)
             else:
-                # best-effort: try plain decode
                 text = _extract_text_plain(data)
         except HTTPException:
             raise
         except Exception as e:
-            text = ""
             injected_blocks.append(f"> [File: {name}] (parse failed: {e})")
             markers.append(f"[File] {name} (parse failed)")
             continue
@@ -407,7 +395,6 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
             continue
 
         text = _snip(text, MAX_EXTRACT_CHARS_PER_FILE)
-        # cap total
         if total_chars + len(text) > MAX_TOTAL_EXTRACT_CHARS:
             remain = max(0, MAX_TOTAL_EXTRACT_CHARS - total_chars)
             text = _snip(text, remain) if remain > 0 else ""
@@ -420,71 +407,41 @@ def _parse_files(files: List[Dict[str, Any]]) -> Tuple[str, List[str]]:
             injected_blocks.append("> [Note] File excerpts truncated due to total limit.")
             break
 
-    injected_text = ""
-    if injected_blocks:
-        injected_text = "\n\n".join(injected_blocks).strip()
-
+    injected_text = "\n\n".join(injected_blocks).strip() if injected_blocks else ""
     return injected_text, markers
 
 
-@app.post("/api/chat/stream")
-async def chat_stream(payload: Dict[str, Any]) -> Any:
-    loaded_state = await registry.get_state()
-    if not loaded_state.get("loaded"):
-        raise HTTPException(status_code=400, detail="No model loaded. Load a model first.")
+def _make_model_user_text(user_text: str, injected_text: str, has_images: bool) -> str:
+    model_user_text = user_text or ""
+    if injected_text:
+        if model_user_text:
+            model_user_text = model_user_text + "\n\n" + "Attached file excerpts:\n" + injected_text
+        else:
+            model_user_text = "Use the attached file excerpts below to answer.\n\nAttached file excerpts:\n" + injected_text
 
+    if not model_user_text and has_images:
+        model_user_text = "Describe the image and answer any relevant details."
+    return model_user_text.strip()
+
+
+async def _stream_chat_common(
+    *,
+    session_id: str,
+    history: List[Dict[str, Any]],
+    system_text: str,
+    model_user_text: str,
+    images_b64: List[str],
+    params: Dict[str, Any],
+    think_mode: str,
+    show_trace: bool,
+    request_id: str,
+):
+    loaded_state = await registry.get_state()
     provider = await registry.get_provider()
     loaded_model = await registry.get_loaded_model()
-    if not provider or not loaded_model:
-        raise HTTPException(status_code=400, detail="Model state invalid. Try reload.")
 
-    session_id = payload.get("session_id")
-    user_text = (payload.get("user_text") or "").strip()
-    system_text = (payload.get("system_text") or "").strip()
-    params = payload.get("params") or {}
-
-    # image
-    images_b64 = payload.get("images_b64") or []
-    if not isinstance(images_b64, list):
-        raise HTTPException(status_code=400, detail="images_b64 must be a list")
-    images_b64 = [x for x in images_b64 if isinstance(x, str) and len(x) > 0]
-    image_name = (payload.get("image_name") or "").strip()
-
-    # files (v0.5.0)
-    files = payload.get("files") or []
-    if files and not isinstance(files, list):
-        raise HTTPException(status_code=400, detail="files must be a list")
-
-    think_mode = (payload.get("think_mode") or "auto").strip()
-    show_trace = bool(payload.get("show_trace", False))
-
-    if not session_id:
-        raise HTTPException(status_code=400, detail="session_id is required")
-
-    sess = store.get_session(session_id)
-    if not sess or sess.title == "__deleted__":
-        raise HTTPException(status_code=404, detail="session not found")
-
-    if not user_text and not images_b64 and not files:
-        raise HTTPException(status_code=400, detail="user_text or images/files is required")
-
-    request_id = await registry.new_stream()
-
-    # Parse files into injection (do not store raw b64)
-    injected_text, file_markers = _parse_files(files)
-
-    # Persist user message (no base64)
-    persisted_lines: List[str] = []
-    if images_b64:
-        marker = f"[Image] {image_name}".strip() if image_name else "[Image]"
-        persisted_lines.append(marker)
-    for mk in file_markers:
-        persisted_lines.append(mk)
-    if user_text:
-        persisted_lines.append(user_text)
-
-    sess.messages.append({"role": "user", "content": "\n".join(persisted_lines).strip()})
-    store.save_session(sess)
+    if not loaded_state.get("loaded") or not provider or not loaded_model:
+        raise HTTPException(status_code=400, detail="No model loaded. Load a model first.")
 
     cancel_flag = {"v": False}
 
@@ -497,19 +454,6 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
 
     def cancelled() -> bool:
         return cancel_flag["v"]
-
-    # history excludes the persisted user message; model receives original user_text + injected file excerpt + images
-    history = [{"role": m["role"], "content": m["content"]} for m in sess.messages[:-1] if "role" in m and "content" in m]
-
-    model_user_text = user_text or ""
-    if injected_text:
-        if model_user_text:
-            model_user_text = model_user_text + "\n\n" + "Attached file excerpts:\n" + injected_text
-        else:
-            model_user_text = "Use the attached file excerpts below to answer.\n\nAttached file excerpts:\n" + injected_text
-
-    if not model_user_text and images_b64:
-        model_user_text = "Describe the image and answer any relevant details."
 
     think_value = _resolve_think_value(loaded_model.model_id, think_mode)
     stream_params = dict(params)
@@ -560,14 +504,150 @@ async def chat_stream(payload: Dict[str, Any]) -> Any:
             yield f"event: error\ndata: {json.dumps({'error': str(e)}, ensure_ascii=False)}\n\n"
         finally:
             poll_task.cancel()
+
             if assistant_accum.strip():
                 sess2 = store.get_session(session_id)
                 if sess2 and sess2.title != "__deleted__":
                     sess2.messages.append({"role": "assistant", "content": assistant_accum})
                     store.save_session(sess2)
+
             await registry.pop_stream(request_id)
 
     return StreamingResponse(event_gen(), media_type="text/event-stream")
+
+
+@app.post("/api/chat/stream")
+async def chat_stream(payload: Dict[str, Any]) -> Any:
+    session_id = payload.get("session_id")
+    user_text = (payload.get("user_text") or "").strip()
+    system_text = (payload.get("system_text") or "").strip()
+    params = payload.get("params") or {}
+
+    images_b64 = payload.get("images_b64") or []
+    if not isinstance(images_b64, list):
+        raise HTTPException(status_code=400, detail="images_b64 must be a list")
+    images_b64 = [x for x in images_b64 if isinstance(x, str) and len(x) > 0]
+    image_name = (payload.get("image_name") or "").strip()
+
+    files = payload.get("files") or []
+    if files and not isinstance(files, list):
+        raise HTTPException(status_code=400, detail="files must be a list")
+
+    think_mode = (payload.get("think_mode") or "auto").strip()
+    show_trace = bool(payload.get("show_trace", False))
+
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    sess = store.get_session(session_id)
+    if not sess or sess.title == "__deleted__":
+        raise HTTPException(status_code=404, detail="session not found")
+
+    if not user_text and not images_b64 and not files:
+        raise HTTPException(status_code=400, detail="user_text or images/files is required")
+
+    request_id = await registry.new_stream()
+
+    injected_text, file_markers = _parse_files(files)
+    model_user_text = _make_model_user_text(user_text, injected_text, has_images=bool(images_b64))
+
+    # Persist user message (NO raw image b64, but DO store prompt text for regen)
+    persisted_lines: List[str] = []
+    if images_b64:
+        marker = f"[Image] {image_name}".strip() if image_name else "[Image]"
+        persisted_lines.append(marker)
+    for mk in file_markers:
+        persisted_lines.append(mk)
+    if user_text:
+        persisted_lines.append(user_text)
+
+    sess.messages.append({
+        "role": "user",
+        "content": "\n".join(persisted_lines).strip(),
+        "meta": {
+            "prompt": model_user_text,
+            "system_text": system_text,
+            "params": params,
+            "think_mode": think_mode,
+            "has_images": bool(images_b64),
+        }
+    })
+    store.save_session(sess)
+
+    # history excludes the persisted user message; model receives model_user_text (+ images)
+    history = [{"role": m["role"], "content": m["content"]} for m in sess.messages[:-1] if "role" in m and "content" in m]
+
+    return await _stream_chat_common(
+        session_id=session_id,
+        history=history,
+        system_text=system_text,
+        model_user_text=model_user_text,
+        images_b64=images_b64,
+        params=params,
+        think_mode=think_mode,
+        show_trace=show_trace,
+        request_id=request_id,
+    )
+
+
+@app.post("/api/chat/regenerate/stream")
+async def chat_regenerate_stream(payload: Dict[str, Any]) -> Any:
+    session_id = payload.get("session_id")
+    show_trace = bool(payload.get("show_trace", False))
+
+    if not session_id:
+        raise HTTPException(status_code=400, detail="session_id is required")
+
+    sess = store.get_session(session_id)
+    if not sess or sess.title == "__deleted__":
+        raise HTTPException(status_code=404, detail="session not found")
+
+    if len(sess.messages) < 2:
+        raise HTTPException(status_code=400, detail="Not enough messages to regenerate")
+
+    # Find last assistant and its preceding user
+    last_idx = len(sess.messages) - 1
+    if sess.messages[last_idx].get("role") != "assistant":
+        raise HTTPException(status_code=400, detail="Last message is not assistant")
+
+    prev_idx = last_idx - 1
+    if prev_idx < 0 or sess.messages[prev_idx].get("role") != "user":
+        raise HTTPException(status_code=400, detail="No preceding user message found")
+
+    user_msg = sess.messages[prev_idx]
+    meta = user_msg.get("meta") or {}
+
+    if meta.get("has_images"):
+        raise HTTPException(status_code=400, detail="Regenerate is not supported for image messages (image binary is not stored).")
+
+    model_user_text = (meta.get("prompt") or user_msg.get("content") or "").strip()
+    system_text = (meta.get("system_text") or "").strip()
+    params = meta.get("params") or {}
+    think_mode = meta.get("think_mode") or "auto"
+
+    if not model_user_text:
+        raise HTTPException(status_code=400, detail="Cannot regenerate: missing prompt")
+
+    # Remove last assistant message
+    sess.messages.pop(last_idx)
+    store.save_session(sess)
+
+    # history: all messages before the user message
+    history = [{"role": m["role"], "content": m["content"]} for m in sess.messages[:prev_idx] if "role" in m and "content" in m]
+
+    request_id = await registry.new_stream()
+
+    return await _stream_chat_common(
+        session_id=session_id,
+        history=history,
+        system_text=system_text,
+        model_user_text=model_user_text,
+        images_b64=[],
+        params=params,
+        think_mode=str(think_mode),
+        show_trace=show_trace,
+        request_id=request_id,
+    )
 
 
 def run() -> None:

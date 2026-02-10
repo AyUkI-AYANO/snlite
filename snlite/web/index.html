@@ -3,18 +3,17 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>SNLite v0.5.0</title>
-  <link rel="stylesheet" href="/static/style.css?v=0.5.0" />
+  <title>SNLite v0.5.1</title>
+  <link rel="stylesheet" href="/static/style.css?v=0.5.1" />
 </head>
 <body>
   <div class="app">
-    <!-- LEFT: sidebar -->
     <aside class="sidebar">
       <div class="brand">
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v0.5.0 · Local GenAI</div>
+          <div class="sub">v0.5.1 · Local GenAI</div>
         </div>
       </div>
 
@@ -147,7 +146,6 @@
       </section>
     </aside>
 
-    <!-- MIDDLE: chat -->
     <main class="main">
       <header class="topbar">
         <div class="top-left">
@@ -155,6 +153,8 @@
           <div class="pill subtle" id="stageBadge">Idle</div>
         </div>
         <div class="top-right">
+          <button id="btnCopyLast" title="Copy last assistant message">Copy last</button>
+          <button id="btnRegen" title="Regenerate last assistant message">Regenerate</button>
           <button id="btnStop" class="danger" disabled>Stop</button>
           <button id="btnClear" title="Clear UI (does not delete session)">Clear UI</button>
         </div>
@@ -183,12 +183,10 @@
           </div>
 
           <div class="attach">
-            <!-- Image -->
             <input id="imageFile" type="file" accept="image/*" style="display:none;" />
             <button id="btnAttach" class="ghost">Attach Image</button>
             <button id="btnRemoveImage" class="ghost" style="display:none;">Remove Image</button>
 
-            <!-- Files -->
             <input id="docFiles" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple style="display:none;" />
             <button id="btnAttachFiles" class="ghost">Attach Files</button>
           </div>
@@ -209,7 +207,6 @@
       </footer>
     </main>
 
-    <!-- RIGHT: thinking workspace -->
     <aside class="workspace" id="workspace">
       <div class="workspace-head">
         <div class="workspace-title">
@@ -228,6 +225,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=0.5.0"></script>
+  <script src="/static/app.js?v=0.5.1"></script>
 </body>
 </html>

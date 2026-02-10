@@ -159,6 +159,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 .top-left { display: flex; gap: 8px; align-items: center; }
+.top-right { display: flex; gap: 8px; align-items: center; }
 
 .pill {
   display: inline-flex;
@@ -190,13 +191,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   gap: 12px;
 }
 
-/* v0.5.0: message row layout */
+/* Message rows */
 .msg-row {
   display: flex;
   align-items: flex-start;
   gap: 10px;
 }
-
 .msg-row.user { justify-content: flex-end; }
 .msg-row.assistant { justify-content: flex-start; }
 
@@ -212,7 +212,6 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   background: rgba(255,255,255,0.06);
   color: rgba(230,237,243,0.9);
 }
-
 .avatar.ai {
   border-color: rgba(78,161,255,0.30);
   background: rgba(78,161,255,0.16);
@@ -259,20 +258,39 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   background: rgba(0,0,0,0.12);
   color: rgba(230,237,243,0.88);
 }
-
 .role-chip.ai {
   border-color: rgba(78,161,255,0.30);
   background: rgba(78,161,255,0.14);
 }
-
 .role-chip.user {
   border-color: rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.06);
 }
 
-.bubble .md {
-  color: rgba(230,237,243,0.95);
+/* v0.5.1: message actions */
+.msg-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
+.msg-action {
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.10);
+  background: rgba(0,0,0,0.10);
+  font-size: 12px;
+  font-weight: 800;
+}
+.msg-action:hover {
+  border-color: rgba(255,255,255,0.18);
+  background: rgba(0,0,0,0.16);
+}
+.msg-action.primary {
+  border-color: rgba(78,161,255,0.30);
+  background: rgba(78,161,255,0.12);
+}
+
+.bubble .md { color: rgba(230,237,243,0.95); }
 
 /* Markdown typography */
 .bubble .md p { margin: 0 0 10px 0; }
