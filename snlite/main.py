@@ -14,7 +14,7 @@ from fastapi.staticfiles import StaticFiles
 import uvicorn
 
 from snlite.registry import AppRegistry
-from snlite.store import SessionStore
+from snlite.store import SessionStore, DEFAULT_GROUP
 from snlite.plugin_manager import PluginRecord, load_provider_plugins
 from snlite.providers.ollama import OllamaProvider
 
@@ -31,7 +31,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="7.0.0")
+app = FastAPI(title="SNLite", version="7.0.1")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -144,8 +144,15 @@ async def sessions_list() -> List[Dict[str, Any]]:
 @app.post("/api/sessions")
 async def sessions_create(payload: Dict[str, Any]) -> Dict[str, Any]:
     title = payload.get("title") or "New Chat"
-    sess = store.create_session(title=title)
-    return {"id": sess.id, "title": sess.title, "created_at": sess.created_at, "updated_at": sess.updated_at}
+    group = payload.get("group") or DEFAULT_GROUP
+    sess = store.create_session(title=title, group=group)
+    return {
+        "id": sess.id,
+        "title": sess.title,
+        "group": sess.group,
+        "created_at": sess.created_at,
+        "updated_at": sess.updated_at,
+    }
 
 
 @app.get("/api/sessions/{session_id}")
@@ -156,6 +163,7 @@ async def sessions_get(session_id: str) -> Dict[str, Any]:
     return {
         "id": sess.id,
         "title": sess.title,
+        "group": sess.group,
         "created_at": sess.created_at,
         "updated_at": sess.updated_at,
         "messages": sess.messages,
@@ -165,20 +173,49 @@ async def sessions_get(session_id: str) -> Dict[str, Any]:
 @app.patch("/api/sessions/{session_id}")
 async def sessions_rename(session_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
     title = payload.get("title")
-    if not title:
-        raise HTTPException(status_code=400, detail="title is required")
-    sess = store.rename_session(session_id, title=title)
+    group = payload.get("group")
+
+    sess = store.get_session(session_id)
     if not sess or sess.title == "__deleted__":
         raise HTTPException(status_code=404, detail="session not found")
-    return {"id": sess.id, "title": sess.title, "updated_at": sess.updated_at}
+
+    if title is None and group is None:
+        raise HTTPException(status_code=400, detail="title or group is required")
+
+    if title is not None:
+        title = str(title).strip()
+        if not title:
+            raise HTTPException(status_code=400, detail="title is required")
+        sess = store.rename_session(session_id, title=title)
+
+    if group is not None:
+        group = str(group).strip()
+        sess = store.set_session_group(session_id, group=group)
+
+    if not sess or sess.title == "__deleted__":
+        raise HTTPException(status_code=404, detail="session not found")
+    return {"id": sess.id, "title": sess.title, "group": sess.group, "updated_at": sess.updated_at}
 
 
 @app.delete("/api/sessions/{session_id}")
 async def sessions_delete(session_id: str) -> Dict[str, Any]:
-    ok = store.delete_session(session_id)
-    if not ok:
+    archive_meta = store.archive_session(session_id)
+    if not archive_meta:
         raise HTTPException(status_code=404, detail="session not found")
-    return {"ok": True}
+    return {"ok": True, "archived": archive_meta}
+
+
+@app.get("/api/archives")
+async def archives_list() -> List[Dict[str, Any]]:
+    return store.list_archives()
+
+
+@app.get("/api/archives/{archive_id}")
+async def archives_get(archive_id: str) -> Dict[str, Any]:
+    item = store.get_archive(archive_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="archive not found")
+    return item
 
 
 @app.get("/api/sessions/{session_id}/export.md")
@@ -197,6 +234,7 @@ async def sessions_export_json(session_id: str) -> Any:
     return JSONResponse({
         "id": sess.id,
         "title": sess.title,
+        "group": sess.group,
         "created_at": sess.created_at,
         "updated_at": sess.updated_at,
         "messages": sess.messages,
