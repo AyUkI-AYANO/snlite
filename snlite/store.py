@@ -101,23 +101,30 @@ class SessionStore:
 
     def delete_session(self, session_id: str) -> bool:
         """
-        JSONL "delete" by writing a tombstone snapshot with messages empty + special flag.
-        Materialize will keep last snapshot; we treat deleted sessions as absent.
+        Hard delete all snapshots for a session from JSONL.
+
+        This prevents deleted session content from remaining in the underlying
+        `sessions.jsonl` file, which can otherwise happen with tombstone-only
+        deletion.
         """
-        sess = self.get_session(session_id)
-        if not sess:
+        snapshots = self._load_all_snapshots()
+        if not snapshots:
             return False
-        now = time.time()
-        tomb = {
-            "id": session_id,
-            "title": "__deleted__",
-            "created_at": sess.created_at,
-            "updated_at": now,
-            "messages": [],
-            "deleted": True,
-        }
-        with open(self.path, "a", encoding="utf-8") as f:
-            f.write(json.dumps(tomb, ensure_ascii=False) + "\n")
+
+        kept: List[Dict[str, Any]] = []
+        found = False
+        for raw in snapshots:
+            if str(raw.get("id")) == session_id:
+                found = True
+                continue
+            kept.append(raw)
+
+        if not found:
+            return False
+
+        with open(self.path, "w", encoding="utf-8") as f:
+            for raw in kept:
+                f.write(json.dumps(raw, ensure_ascii=False) + "\n")
         return True
 
     def export_markdown(self, session_id: str) -> Optional[str]:
