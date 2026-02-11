@@ -1,7 +1,5 @@
-/* 直接使用你当前 v0.5.3.1 的 app.js（无需改动）
-   ——为了保持“只改 UI”，这里不动任何逻辑。
-   如果你希望我把这里也升级成 v6.0 的小增强（比如：workspace 自动折叠按钮/移动端 sidebar drawer），
-   你再说，我再给你 v6.0 的 JS 版本。
+/* SNLite web app (v6.1.0)
+   Vanilla JS only, local-first UI.
 */
 
 const $ = (id) => document.getElementById(id);
@@ -742,6 +740,57 @@ async function exportSessionJson() {
   URL.revokeObjectURL(a.href);
 }
 
+async function exportAllSessions() {
+  const r = await fetch('/api/export/sessions.json');
+  if (!r.ok) {
+    alert('Backup failed');
+    return;
+  }
+  const data = await r.json();
+  const ts = new Date().toISOString().replace(/[:.]/g, '-');
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json;charset=utf-8' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `snlite_backup_${ts}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function importAllSessions() {
+  const picker = document.createElement('input');
+  picker.type = 'file';
+  picker.accept = '.json,application/json';
+  picker.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    let parsed;
+    try {
+      parsed = JSON.parse(await file.text());
+    } catch {
+      alert('Invalid JSON file.');
+      return;
+    }
+    const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
+    if (!sessions.length) {
+      alert('No sessions found in backup file.');
+      return;
+    }
+    const replace = confirm('Import mode: OK = replace all local sessions, Cancel = append only.');
+    const mode = replace ? 'replace' : 'append';
+    const result = await apiPost('/api/sessions/import.json', { sessions, mode });
+    alert(`Import done: imported ${result.imported}, skipped ${result.skipped}.`);
+    await refreshSessions();
+  };
+  picker.click();
+}
+
+async function compactSessions() {
+  const ok = confirm('Compact local session snapshots now?');
+  if (!ok) return;
+  const result = await apiPost('/api/sessions/compact', {});
+  alert(`Compaction done: ${result.before} -> ${result.after} snapshots (saved ${result.saved}).`);
+}
+
 async function openSession(sessionId) {
   const sess = await apiGet(`/api/sessions/${sessionId}`);
   clearUI();
@@ -851,6 +900,7 @@ function renderFileList() {
     toggle.onclick = () => {
       attachedFiles[idx].enabled = !(attachedFiles[idx].enabled !== false);
       renderFileList();
+      clearFileInspect();
     };
 
     const btn = document.createElement("button");
@@ -859,6 +909,7 @@ function renderFileList() {
     btn.onclick = () => {
       attachedFiles.splice(idx, 1);
       renderFileList();
+      clearFileInspect();
     };
 
     actions.appendChild(toggle);
@@ -873,6 +924,7 @@ function clearAttachedFiles() {
   attachedFiles = [];
   $("docFiles").value = "";
   renderFileList();
+  clearFileInspect();
 }
 
 function readFileAsBase64(file) {
@@ -887,6 +939,44 @@ function readFileAsBase64(file) {
     r.onerror = reject;
     r.readAsDataURL(file);
   });
+}
+
+function clearFileInspect() {
+  const el = $("fileInspect");
+  if (!el) return;
+  el.style.display = "none";
+  el.textContent = "";
+}
+
+async function inspectAttachedFiles() {
+  const active = attachedFiles.filter((f) => f.enabled !== false);
+  if (!active.length) {
+    alert("No enabled files to inspect.");
+    clearFileInspect();
+    return;
+  }
+  const btn = $("btnInspectFiles");
+  btn.disabled = true;
+  btn.textContent = "Inspecting...";
+  try {
+    const result = await apiPost('/api/files/inspect', { files: active });
+    const files = result?.meta?.files || [];
+    const total = Number(result?.meta?.total_chars || 0);
+    const truncated = !!result?.meta?.truncated;
+    const lines = files.map((f) => {
+      const flag = f.truncated ? ' · truncated' : '';
+      return `- ${f.name}: ${f.status}, ${f.chars || 0} chars${flag}`;
+    });
+    const msg = [`Inspect summary: ${files.length} files, ${total} chars${truncated ? ' (truncated)' : ''}.`, ...lines].join('\n');
+    const el = $("fileInspect");
+    el.style.display = "block";
+    el.textContent = msg;
+  } catch (err) {
+    alert(`Inspect failed: ${err.message}`);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = "Inspect file extraction";
+  }
 }
 
 /* ---------- Copy last & Regenerate ---------- */
@@ -1154,8 +1244,6 @@ async function send() {
     files: filesPayload,
   };
 
-  state.lastRequestBody = JSON.parse(JSON.stringify(body));
-
   clearAttachedImage();
   clearAttachedFiles();
 
@@ -1319,6 +1407,9 @@ async function init() {
   $("btnDeleteSession").onclick = deleteSession;
   $("btnExport").onclick = exportSession;
   $("btnExportJson").onclick = exportSessionJson;
+  $("btnExportAll").onclick = exportAllSessions;
+  $("btnImportAll").onclick = importAllSessions;
+  $("btnCompact").onclick = compactSessions;
 
   $("btnSend").onclick = send;
   $("btnStop").onclick = stopStreaming;
@@ -1382,6 +1473,7 @@ async function init() {
 
   // Files
   $("btnAttachFiles").onclick = () => $("docFiles").click();
+  $("btnInspectFiles").onclick = inspectAttachedFiles;
   $("docFiles").addEventListener("change", async (e) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -1407,12 +1499,11 @@ async function init() {
     }
 
     renderFileList();
+    clearFileInspect();
     $("docFiles").value = "";
   });
 
   wsShow(false);
-  state.lastRequestBody = JSON.parse(JSON.stringify(body));
-
   clearAttachedImage();
   clearAttachedFiles();
 
