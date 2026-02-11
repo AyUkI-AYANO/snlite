@@ -142,6 +142,14 @@ snlite/
 
 ### Changelog
 
+v7.0.1
+
+Added
+
+- Archive
+
+- Chat Folders
+
 v7.0.0
 
 Added
