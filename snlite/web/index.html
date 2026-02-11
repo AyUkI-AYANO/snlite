@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>SNLite v6.1.1</title>
-  <link rel="stylesheet" href="/static/style.css?v=6.1.1" />
+  <title>SNLite v6.1.2</title>
+  <link rel="stylesheet" href="/static/style.css?v=6.1.2" />
 </head>
 <body>
   <div class="app">
@@ -14,7 +14,7 @@
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v6.1.1 · Local GenAI</div>
+          <div class="sub">v6.1.2 · Local GenAI</div>
         </div>
       </div>
 
@@ -210,6 +210,7 @@
 
             <input id="docFiles" type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown" multiple style="display:none;" />
             <button id="btnAttachFiles" class="ghost">Attach Files</button>
+            <button id="btnInspectFiles" class="ghost">Inspect file extraction</button>
           </div>
 
           <div id="imageInfo" class="attach-info" style="display:none;">
@@ -221,9 +222,6 @@
           </div>
 
           <div id="fileList" class="file-list" style="display:none;"></div>
-          <div class="row" style="margin-top:8px;">
-            <button id="btnInspectFiles" class="ghost">Inspect file extraction</button>
-          </div>
           <div id="fileInspect" class="hint" style="display:none;"></div>
 
           <textarea id="input" rows="2" placeholder="Type your message…  (Ctrl/⌘ + Enter to send)"></textarea>
@@ -250,6 +248,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=6.1.1"></script>
+  <script src="/static/app.js?v=6.1.2"></script>
 </body>
 </html>
