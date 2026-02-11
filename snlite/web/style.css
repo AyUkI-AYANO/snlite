@@ -64,6 +64,7 @@ body{
 *::-webkit-scrollbar-track{ background: rgba(0,0,0,0.15); }
 
 /* -------- Common form elements -------- */
+input:not([type]),
 input[type="text"],
 input[type="search"],
 select,
@@ -78,6 +79,7 @@ textarea{
   outline:none;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
+input:not([type]):hover,
 input[type="text"]:hover,
 input[type="search"]:hover,
 select:hover,
@@ -86,6 +88,7 @@ textarea:hover{
   border-color: rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.045);
 }
+input:not([type]):focus,
 input[type="text"]:focus,
 input[type="search"]:focus,
 select:focus,
