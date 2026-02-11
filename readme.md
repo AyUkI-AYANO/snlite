@@ -22,6 +22,10 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
   - Text is extracted and injected into the prompt (no binary storage)
 - **Sessions with auto titles**
   - First user message → automatic chat title
+  - Archive chat or hard-delete chat directly from sidebar
+- **Archive management**
+  - Browse archived chat snapshots
+  - Delete unnecessary archives directly in UI
 - **Lightweight & hackable**
   - No frontend framework
   - Plain FastAPI + vanilla JS
@@ -141,6 +145,17 @@ snlite/
 ---
 
 ### Changelog
+
+v7.0.2
+
+Added
+
+- New **Delete** button for sessions to permanently remove chats without creating an archive
+- New **Delete archive** button to remove unnecessary archived files
+
+Improved
+
+- Session actions now separate archive flow and permanent delete flow to reduce accidental operations
 
 v7.0.1
 

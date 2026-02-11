@@ -205,6 +205,14 @@ async def sessions_delete(session_id: str) -> Dict[str, Any]:
     return {"ok": True, "archived": archive_meta}
 
 
+@app.delete("/api/sessions/{session_id}/hard")
+async def sessions_delete_hard(session_id: str) -> Dict[str, Any]:
+    ok = store.delete_session(session_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="session not found")
+    return {"ok": True, "deleted": True}
+
+
 @app.get("/api/archives")
 async def archives_list() -> List[Dict[str, Any]]:
     return store.list_archives()
@@ -216,6 +224,14 @@ async def archives_get(archive_id: str) -> Dict[str, Any]:
     if not item:
         raise HTTPException(status_code=404, detail="archive not found")
     return item
+
+
+@app.delete("/api/archives/{archive_id}")
+async def archives_delete(archive_id: str) -> Dict[str, Any]:
+    ok = store.delete_archive(archive_id)
+    if not ok:
+        raise HTTPException(status_code=404, detail="archive not found")
+    return {"ok": True, "deleted": True}
 
 
 @app.get("/api/sessions/{session_id}/export.md")

@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: snlite
-Version: 7.0.1
+Version: 7.0.2
 Summary: SNLite - lightweight local GenAI chat framework with browser GUI
 Requires-Python: >=3.10
 Requires-Dist: fastapi>=0.110

@@ -186,6 +186,25 @@ class SessionStore:
             content = f.read()
         return {**item, "content": content}
 
+    def delete_archive(self, archive_id: str) -> bool:
+        rows = self.list_archives()
+        target = next((x for x in rows if x.get("archive_id") == archive_id), None)
+        if not target:
+            return False
+
+        file_path = str(target.get("file_path") or "").strip()
+        if file_path and os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except OSError:
+                pass
+
+        kept = [x for x in rows if x.get("archive_id") != archive_id]
+        with open(self.archive_index_path, "w", encoding="utf-8") as f:
+            for row in kept:
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        return True
+
     def archive_session(self, session_id: str) -> Optional[Dict[str, Any]]:
         sess = self.get_session(session_id)
         if not sess:
