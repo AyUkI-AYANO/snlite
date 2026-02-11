@@ -7,10 +7,14 @@ from dataclasses import dataclass, asdict
 from typing import List, Dict, Any, Optional
 from uuid import uuid4
 
+
+DEFAULT_GROUP = "未分组"
+
 @dataclass
 class Session:
     id: str
     title: str
+    group: str
     created_at: float
     updated_at: float
     messages: List[Dict[str, Any]]  # {role, content}
@@ -26,6 +30,13 @@ class SessionStore:
         self.data_dir = data_dir
         os.makedirs(self.data_dir, exist_ok=True)
         self.path = os.path.join(self.data_dir, "sessions.jsonl")
+        self.archives_dir = os.path.join(self.data_dir, "archives")
+        os.makedirs(self.archives_dir, exist_ok=True)
+        self.archive_index_path = os.path.join(self.data_dir, "archives.jsonl")
+
+    def _normalize_group(self, group: Optional[str]) -> str:
+        g = str(group or "").strip()
+        return g or DEFAULT_GROUP
 
     def _load_all_snapshots(self) -> List[Dict[str, Any]]:
         if not os.path.exists(self.path):
@@ -50,6 +61,7 @@ class SessionStore:
                 sess = Session(
                     id=s["id"],
                     title=s.get("title", "Untitled"),
+                    group=self._normalize_group(s.get("group")),
                     created_at=float(s.get("created_at", time.time())),
                     updated_at=float(s.get("updated_at", time.time())),
                     messages=list(s.get("messages", [])),
@@ -67,17 +79,27 @@ class SessionStore:
     def list_sessions(self) -> List[Dict[str, Any]]:
         by_id = self._materialize()
         items = sorted(by_id.values(), key=lambda x: x.updated_at, reverse=True)
-        return [{"id": s.id, "title": s.title, "updated_at": s.updated_at, "created_at": s.created_at} for s in items]
+        return [
+            {
+                "id": s.id,
+                "title": s.title,
+                "group": s.group,
+                "updated_at": s.updated_at,
+                "created_at": s.created_at,
+            }
+            for s in items
+        ]
 
     def get_session(self, session_id: str) -> Optional[Session]:
         by_id = self._materialize()
         return by_id.get(session_id)
 
-    def create_session(self, title: str = "New Chat") -> Session:
+    def create_session(self, title: str = "New Chat", group: str = DEFAULT_GROUP) -> Session:
         now = time.time()
         sess = Session(
             id=uuid4().hex,
             title=title,
+            group=self._normalize_group(group),
             created_at=now,
             updated_at=now,
             messages=[],
@@ -98,6 +120,99 @@ class SessionStore:
         sess.title = title
         self.save_session(sess)
         return sess
+
+    def set_session_group(self, session_id: str, group: str) -> Optional[Session]:
+        sess = self.get_session(session_id)
+        if not sess:
+            return None
+        sess.group = self._normalize_group(group)
+        self.save_session(sess)
+        return sess
+
+    def _build_archive_text(self, sess: Session, archived_at: float) -> str:
+        lines = [
+            f"# {sess.title}",
+            "",
+            f"会话ID: {sess.id}",
+            f"分组: {sess.group}",
+            f"创建时间戳: {sess.created_at}",
+            f"归档时间戳: {archived_at}",
+            "",
+            "---",
+            "",
+        ]
+        for m in sess.messages:
+            role = m.get("role", "unknown")
+            content = m.get("content", "")
+            lines.append(f"[{role}]")
+            lines.append(content)
+            lines.append("")
+        return "\n".join(lines).strip() + "\n"
+
+    def _append_archive_index(self, archive: Dict[str, Any]) -> None:
+        with open(self.archive_index_path, "a", encoding="utf-8") as f:
+            f.write(json.dumps(archive, ensure_ascii=False) + "\n")
+
+    def list_archives(self) -> List[Dict[str, Any]]:
+        if not os.path.exists(self.archive_index_path):
+            return []
+        out: Dict[str, Dict[str, Any]] = {}
+        with open(self.archive_index_path, "r", encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    row = json.loads(line)
+                except Exception:
+                    continue
+                archive_id = str(row.get("archive_id") or "").strip()
+                if not archive_id:
+                    continue
+                out[archive_id] = row
+        rows = list(out.values())
+        rows.sort(key=lambda x: float(x.get("archived_at", 0)), reverse=True)
+        return rows
+
+    def get_archive(self, archive_id: str) -> Optional[Dict[str, Any]]:
+        rows = self.list_archives()
+        item = next((x for x in rows if x.get("archive_id") == archive_id), None)
+        if not item:
+            return None
+        file_path = item.get("file_path") or ""
+        if not file_path or not os.path.exists(file_path):
+            return None
+        with open(file_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        return {**item, "content": content}
+
+    def archive_session(self, session_id: str) -> Optional[Dict[str, Any]]:
+        sess = self.get_session(session_id)
+        if not sess:
+            return None
+
+        archived_at = time.time()
+        archive_id = uuid4().hex
+        filename = f"archive_{int(archived_at)}_{session_id}.txt"
+        file_path = os.path.join(self.archives_dir, filename)
+        content = self._build_archive_text(sess, archived_at)
+        with open(file_path, "w", encoding="utf-8") as f:
+            f.write(content)
+
+        archive_meta = {
+            "archive_id": archive_id,
+            "session_id": sess.id,
+            "title": sess.title,
+            "group": sess.group,
+            "archived_at": archived_at,
+            "created_at": sess.created_at,
+            "message_count": len(sess.messages),
+            "file_path": file_path,
+            "file_name": filename,
+        }
+        self._append_archive_index(archive_meta)
+        self.delete_session(session_id)
+        return archive_meta
 
     def delete_session(self, session_id: str) -> bool:
         """
@@ -170,6 +285,7 @@ class SessionStore:
             try:
                 sid = str(raw.get("id") or "").strip() or uuid4().hex
                 title = str(raw.get("title") or "New Chat").strip() or "New Chat"
+                group = self._normalize_group(raw.get("group"))
                 created_at = float(raw.get("created_at") or time.time())
                 updated_at = float(raw.get("updated_at") or created_at)
                 messages = raw.get("messages") or []
@@ -179,7 +295,7 @@ class SessionStore:
                 for m in messages:
                     if isinstance(m, dict) and "role" in m and "content" in m:
                         normalized.append(m)
-                return Session(id=sid, title=title, created_at=created_at, updated_at=updated_at, messages=normalized)
+                return Session(id=sid, title=title, group=group, created_at=created_at, updated_at=updated_at, messages=normalized)
             except Exception:
                 return None
 

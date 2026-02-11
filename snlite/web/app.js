@@ -1,4 +1,4 @@
-/* SNLite web app (v7.0.0)
+/* SNLite web app (v7.0.1)
    Vanilla JS only, local-first UI.
 */
 
@@ -659,20 +659,42 @@ async function unloadModel() {
 async function refreshSessions() {
   const items = await apiGet("/api/sessions");
   const q = ($("sessionSearch")?.value || "").trim().toLowerCase();
-  const filtered = q ? items.filter((s) => (s.title || "").toLowerCase().includes(q)) : items;
+  const filtered = q
+    ? items.filter((s) => {
+      const t = (s.title || "").toLowerCase();
+      const g = (s.group || "").toLowerCase();
+      return t.includes(q) || g.includes(q);
+    })
+    : items;
   const container = $("sessions");
   container.innerHTML = "";
+
+  const grouped = new Map();
   for (const s of filtered) {
-    const div = document.createElement("div");
-    div.className = "session-item" + (state.currentSessionId === s.id ? " active" : "");
-    div.textContent = s.title;
-    div.onclick = async () => {
-      state.currentSessionId = s.id;
-      await openSession(s.id);
-      await refreshSessions();
-    };
-    container.appendChild(div);
+    const groupName = (s.group || "未分组").trim() || "未分组";
+    if (!grouped.has(groupName)) grouped.set(groupName, []);
+    grouped.get(groupName).push(s);
   }
+
+  for (const [groupName, list] of grouped.entries()) {
+    const head = document.createElement("div");
+    head.className = "session-group-title";
+    head.textContent = groupName;
+    container.appendChild(head);
+
+    for (const s of list) {
+      const div = document.createElement("div");
+      div.className = "session-item" + (state.currentSessionId === s.id ? " active" : "");
+      div.innerHTML = `<span class="session-title">${escapeHtml(s.title || "New Chat")}</span><span class="session-meta">${escapeHtml(groupName)}</span>`;
+      div.onclick = async () => {
+        state.currentSessionId = s.id;
+        await openSession(s.id);
+        await refreshSessions();
+      };
+      container.appendChild(div);
+    }
+  }
+
   if (!state.currentSessionId && items.length) {
     state.currentSessionId = items[0].id;
     await openSession(items[0].id);
@@ -697,12 +719,49 @@ async function renameSession() {
 
 async function deleteSession() {
   if (!state.currentSessionId) return;
-  const ok = confirm("Delete this session?");
+  const ok = confirm("Archive this session? It will be removed and saved as TXT.");
   if (!ok) return;
   await apiDelete(`/api/sessions/${state.currentSessionId}`);
   state.currentSessionId = null;
   clearUI();
   await refreshSessions();
+  await refreshArchives();
+}
+
+async function setSessionGroup() {
+  if (!state.currentSessionId) return;
+  const group = ($("sessionGroup")?.value || "").trim();
+  if (!group) {
+    alert("请输入分组名称");
+    return;
+  }
+  await apiPatch(`/api/sessions/${state.currentSessionId}`, { group });
+  await refreshSessions();
+}
+
+async function refreshArchives() {
+  const items = await apiGet("/api/archives");
+  const box = $("archives");
+  box.innerHTML = "";
+  if (!items.length) {
+    const empty = document.createElement("div");
+    empty.className = "hint";
+    empty.textContent = "暂无归档";
+    box.appendChild(empty);
+    return;
+  }
+
+  for (const a of items) {
+    const div = document.createElement("div");
+    div.className = "archive-item";
+    const ts = new Date((a.archived_at || 0) * 1000).toLocaleString();
+    div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || "Untitled")}</div><div class="archive-meta">${escapeHtml(a.group || "未分组")} · ${escapeHtml(ts)}</div>`;
+    div.onclick = async () => {
+      const detail = await apiGet(`/api/archives/${a.archive_id}`);
+      $("archiveContent").value = detail.content || "";
+    };
+    box.appendChild(div);
+  }
 }
 
 async function exportSession() {
@@ -793,6 +852,9 @@ async function compactSessions() {
 
 async function openSession(sessionId) {
   const sess = await apiGet(`/api/sessions/${sessionId}`);
+  if ($("sessionGroup")) {
+    $("sessionGroup").value = sess.group || "";
+  }
   clearUI();
   for (const m of sess.messages) {
     if (m.role === "user") {
@@ -1405,11 +1467,13 @@ async function init() {
   $("btnNewSession").onclick = newSession;
   $("btnRenameSession").onclick = renameSession;
   $("btnDeleteSession").onclick = deleteSession;
+  $("btnSetGroup").onclick = setSessionGroup;
   $("btnExport").onclick = exportSession;
   $("btnExportJson").onclick = exportSessionJson;
   $("btnExportAll").onclick = exportAllSessions;
   $("btnImportAll").onclick = importAllSessions;
   $("btnCompact").onclick = compactSessions;
+  $("btnRefreshArchives").onclick = refreshArchives;
 
   $("btnSend").onclick = send;
   $("btnStop").onclick = stopStreaming;
@@ -1510,6 +1574,7 @@ async function init() {
   setStage("Idle");
   await refreshModels();
   await refreshSessions();
+  await refreshArchives();
 
   userScrolledUp = false;
   maybeAutoScroll(true);

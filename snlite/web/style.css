@@ -221,6 +221,10 @@ button.ghost:hover{
   padding-right:2px;
 }
 .session-item{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
   padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid rgba(255,255,255,0.08);
@@ -228,6 +232,47 @@ button.ghost:hover{
   cursor:pointer;
   transition: border-color .15s ease, background .15s ease, transform .06s ease;
 }
+.session-title{
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.session-meta{
+  font-size: 11px;
+  color: var(--muted);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 999px;
+  padding: 2px 8px;
+  flex-shrink: 0;
+}
+.session-group-title{
+  margin: 8px 2px 2px;
+  font-size: 12px;
+  color: var(--primary2);
+  font-weight: 800;
+}
+
+.archives{
+  max-height: 200px;
+  overflow: auto;
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+  margin-bottom:8px;
+}
+.archive-item{
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius-md);
+  background: rgba(255,255,255,0.03);
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.archive-item:hover{
+  border-color: rgba(255,255,255,0.15);
+}
+.archive-title{ font-size: 13px; font-weight: 700; }
+.archive-meta{ font-size: 11px; color: var(--muted); margin-top: 3px; }
 .session-item:hover{
   border-color: rgba(255,255,255,0.14);
   background: rgba(255,255,255,0.045);
