@@ -1,4 +1,4 @@
-/* SNLite web app (v7.0.1)
+/* SNLite web app (v7.0.2)
    Vanilla JS only, local-first UI.
 */
 
@@ -13,6 +13,7 @@ let state = {
   lastRequestBody: null,
   chatSearchMatches: [],
   chatSearchIndex: -1,
+  selectedArchiveId: null,
 };
 
 let attachedImage = { name: null, b64: null };
@@ -717,7 +718,7 @@ async function renameSession() {
   await refreshSessions();
 }
 
-async function deleteSession() {
+async function archiveSession() {
   if (!state.currentSessionId) return;
   const ok = confirm("Archive this session? It will be removed and saved as TXT.");
   if (!ok) return;
@@ -726,6 +727,16 @@ async function deleteSession() {
   clearUI();
   await refreshSessions();
   await refreshArchives();
+}
+
+async function deleteSession() {
+  if (!state.currentSessionId) return;
+  const ok = confirm("Delete this session permanently without archiving? This cannot be undone.");
+  if (!ok) return;
+  await apiDelete(`/api/sessions/${state.currentSessionId}/hard`);
+  state.currentSessionId = null;
+  clearUI();
+  await refreshSessions();
 }
 
 async function setSessionGroup() {
@@ -744,6 +755,8 @@ async function refreshArchives() {
   const box = $("archives");
   box.innerHTML = "";
   if (!items.length) {
+    state.selectedArchiveId = null;
+    $("archiveContent").value = "";
     const empty = document.createElement("div");
     empty.className = "hint";
     empty.textContent = "暂无归档";
@@ -751,17 +764,38 @@ async function refreshArchives() {
     return;
   }
 
+  if (state.selectedArchiveId && !items.some((a) => a.archive_id === state.selectedArchiveId)) {
+    state.selectedArchiveId = null;
+    $("archiveContent").value = "";
+  }
+
   for (const a of items) {
     const div = document.createElement("div");
-    div.className = "archive-item";
+    const active = state.selectedArchiveId === a.archive_id;
+    div.className = "archive-item" + (active ? " active" : "");
     const ts = new Date((a.archived_at || 0) * 1000).toLocaleString();
     div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || "Untitled")}</div><div class="archive-meta">${escapeHtml(a.group || "未分组")} · ${escapeHtml(ts)}</div>`;
     div.onclick = async () => {
       const detail = await apiGet(`/api/archives/${a.archive_id}`);
+      state.selectedArchiveId = a.archive_id;
       $("archiveContent").value = detail.content || "";
+      await refreshArchives();
     };
     box.appendChild(div);
   }
+}
+
+async function deleteArchive() {
+  if (!state.selectedArchiveId) {
+    alert("请先选择一个归档");
+    return;
+  }
+  const ok = confirm("Delete selected archive permanently?");
+  if (!ok) return;
+  await apiDelete(`/api/archives/${state.selectedArchiveId}`);
+  state.selectedArchiveId = null;
+  $("archiveContent").value = "";
+  await refreshArchives();
 }
 
 async function exportSession() {
@@ -1466,6 +1500,7 @@ async function init() {
 
   $("btnNewSession").onclick = newSession;
   $("btnRenameSession").onclick = renameSession;
+  $("btnArchiveSession").onclick = archiveSession;
   $("btnDeleteSession").onclick = deleteSession;
   $("btnSetGroup").onclick = setSessionGroup;
   $("btnExport").onclick = exportSession;
@@ -1474,6 +1509,7 @@ async function init() {
   $("btnImportAll").onclick = importAllSessions;
   $("btnCompact").onclick = compactSessions;
   $("btnRefreshArchives").onclick = refreshArchives;
+  $("btnDeleteArchive").onclick = deleteArchive;
 
   $("btnSend").onclick = send;
   $("btnStop").onclick = stopStreaming;

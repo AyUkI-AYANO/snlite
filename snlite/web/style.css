@@ -271,6 +271,10 @@ button.ghost:hover{
 .archive-item:hover{
   border-color: rgba(255,255,255,0.15);
 }
+.archive-item.active{
+  border-color: rgba(78,161,255,0.40);
+  background: rgba(78,161,255,0.12);
+}
 .archive-title{ font-size: 13px; font-weight: 700; }
 .archive-meta{ font-size: 11px; color: var(--muted); margin-top: 3px; }
 .session-item:hover{
