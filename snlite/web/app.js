@@ -1,4 +1,4 @@
-/* SNLite web app (v6.1.0)
+/* SNLite web app (v6.1.1)
    Vanilla JS only, local-first UI.
 */
 

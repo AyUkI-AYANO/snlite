@@ -138,6 +138,17 @@ snlite/
 
 ### Changelog
 
+v6.1.1
+
+Fixed
+
+- Unified search input styles with the dark UI theme (chat search + session search), including border, background and placeholder colors.
+
+Improved
+
+- Harmonized topbar control heights and spacing for better visual rhythm.
+- Refined chat-search capsule styling and match counter readability.
+
 v6.1.0
 
 Added
