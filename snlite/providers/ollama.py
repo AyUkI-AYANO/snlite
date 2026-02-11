@@ -6,6 +6,8 @@ from typing import Any, AsyncIterator, Callable, Dict, List, Optional
 
 import httpx
 
+from snlite.providers.base import Provider
+
 
 @dataclass
 class ModelInfo:
@@ -19,7 +21,9 @@ class LoadedModel:
     meta: Dict[str, Any]
 
 
-class OllamaProvider:
+class OllamaProvider(Provider):
+    name = "ollama"
+
     def __init__(self, base_url: str = "http://127.0.0.1:11434", timeout: float = 120.0):
         self.base_url = base_url.rstrip("/")
         self.timeout = timeout

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, AsyncIterator, Dict, List, Optional
+from typing import Any, AsyncIterator, Callable, Dict, List
 
 
 class Provider(ABC):
@@ -39,12 +39,13 @@ class Provider(ABC):
     async def stream_chat(
         self,
         model_id: str,
-        messages: List[Dict[str, str]],
+        messages: List[Dict[str, Any]],
         params: Dict[str, Any],
-        cancelled: Optional[callable] = None,
-    ) -> AsyncIterator[str]:
+        cancelled: Callable[[], bool],
+    ) -> AsyncIterator[Dict[str, str]]:
         """
-        Yields tokens/chunks as strings.
+        Yields dict chunks.
+        Typical shape: {"thinking": "...", "content": "..."}.
         cancelled(): bool -> return True if should cancel
         """
         ...
