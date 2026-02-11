@@ -15,6 +15,7 @@ import uvicorn
 
 from snlite.registry import AppRegistry
 from snlite.store import SessionStore
+from snlite.plugin_manager import PluginRecord, load_provider_plugins
 from snlite.providers.ollama import OllamaProvider
 
 from docx import Document
@@ -30,7 +31,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="6.1.2")
+app = FastAPI(title="SNLite", version="7.0.0")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -40,6 +41,14 @@ store = SessionStore(SNLITE_DATA_DIR)
 
 ollama_provider = OllamaProvider(base_url=OLLAMA_BASE_URL)
 PROVIDERS = {"ollama": ollama_provider}
+PLUGIN_RECORDS: List[PluginRecord] = [
+    PluginRecord(name="ollama", source="builtin", module="snlite.providers.ollama", loaded=True)
+]
+
+_plugin_providers, _loaded_plugin_records = load_provider_plugins()
+for provider_name, provider in _plugin_providers.items():
+    PROVIDERS[provider_name] = provider
+PLUGIN_RECORDS.extend(_loaded_plugin_records)
 
 
 @app.middleware("http")
@@ -63,14 +72,37 @@ async def list_models() -> Dict[str, Any]:
     state = await registry.get_state()
     providers_out = []
     for name, p in PROVIDERS.items():
+        plugin_record = next((x for x in PLUGIN_RECORDS if x.name == name and x.loaded), None)
         try:
             models = await p.list_models()
             err = None
         except Exception as e:
             models = []
             err = str(e)
-        providers_out.append({"name": name, "models": models, "error": err})
+        providers_out.append({
+            "name": name,
+            "models": models,
+            "error": err,
+            "source": "builtin" if not plugin_record else plugin_record.source,
+            "module": None if not plugin_record else plugin_record.module,
+        })
     return {"state": state, "providers": providers_out}
+
+
+@app.get("/api/plugins/providers")
+async def list_provider_plugins() -> Dict[str, Any]:
+    return {
+        "plugins": [
+            {
+                "name": x.name,
+                "source": x.source,
+                "module": x.module,
+                "loaded": x.loaded,
+                "error": x.error,
+            }
+            for x in PLUGIN_RECORDS
+        ]
+    }
 
 
 @app.post("/api/models/load")

@@ -1,2 +1,5 @@
 [console_scripts]
 snlite = snlite.cli:run
+
+[snlite.providers]
+echo = snlite.plugins.example_provider:plugin_entry

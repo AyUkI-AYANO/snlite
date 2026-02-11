@@ -3,6 +3,7 @@ snlite/__init__.py
 snlite/cli.py
 snlite/main.py
 snlite/ollama_manager.py
+snlite/plugin_manager.py
 snlite/registry.py
 snlite/store.py
 snlite.egg-info/PKG-INFO
@@ -11,6 +12,8 @@ snlite.egg-info/dependency_links.txt
 snlite.egg-info/entry_points.txt
 snlite.egg-info/requires.txt
 snlite.egg-info/top_level.txt
+snlite/plugins/__init__.py
+snlite/plugins/example_provider.py
 snlite/providers/__init__.py
 snlite/providers/base.py
 snlite/providers/llama_cpp.py

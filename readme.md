@@ -25,6 +25,10 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 - **Lightweight & hackable**
   - No frontend framework
   - Plain FastAPI + vanilla JS
+- **Provider plugin support (v7.0.0)**
+  - Auto-discover providers from Python entry points (`snlite.providers`)
+  - Supports third-party provider packages
+  - Includes built-in `echo` example plugin
 
 ---
 
@@ -137,6 +141,15 @@ snlite/
 ---
 
 ### Changelog
+
+v7.0.0
+
+Added
+
+- Provider plugin system based on Python entry points (`snlite.providers`)
+- Built-in example provider plugin: `echo`
+- Plugin diagnostics endpoint: `/api/plugins/providers`
+- Provider plugin development guide: `docs/provider-plugin-guide.md`
 
 v6.1.2
 
@@ -284,4 +297,3 @@ Initial local chat UI
 Model loading + basic conversation
 
 ---
-
