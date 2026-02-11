@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>SNLite v6.0.2</title>
-  <link rel="stylesheet" href="/static/style.css?v=6.0.2" />
+  <title>SNLite v6.1.0</title>
+  <link rel="stylesheet" href="/static/style.css?v=6.1.0" />
 </head>
 <body>
   <div class="app">
@@ -14,7 +14,7 @@
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v6.0.2 · Local GenAI</div>
+          <div class="sub">v6.1.0 · Local GenAI</div>
         </div>
       </div>
 
@@ -54,6 +54,11 @@
         <div class="row">
           <button id="btnExport">Export .md</button>
           <button id="btnExportJson">Export .json</button>
+        </div>
+        <div class="row">
+          <button id="btnExportAll">Backup all</button>
+          <button id="btnImportAll">Import</button>
+          <button id="btnCompact">Compact</button>
         </div>
       </section>
 
@@ -216,6 +221,10 @@
           </div>
 
           <div id="fileList" class="file-list" style="display:none;"></div>
+          <div class="row" style="margin-top:8px;">
+            <button id="btnInspectFiles" class="ghost">Inspect file extraction</button>
+          </div>
+          <div id="fileInspect" class="hint" style="display:none;"></div>
 
           <textarea id="input" rows="2" placeholder="Type your message…  (Ctrl/⌘ + Enter to send)"></textarea>
         </div>
@@ -241,6 +250,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=6.0.2"></script>
+  <script src="/static/app.js?v=6.1.0"></script>
 </body>
 </html>

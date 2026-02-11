@@ -138,6 +138,18 @@ snlite/
 
 ### Changelog
 
+v6.1.0
+
+Added
+
+- Session maintenance tools: export all sessions backup, import sessions (append/replace), and JSONL compaction
+- File extraction inspection API + UI action to preview parse status/char counts before sending
+
+Improved
+
+- Attachment workflow now clears stale inspection results when file list changes
+- Frontend session tools for local backup/migration without leaving the app
+
 v6.0.2
 
 Added

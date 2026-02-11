@@ -30,7 +30,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="6.0.2")
+app = FastAPI(title="SNLite", version="6.1.0")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -169,6 +169,30 @@ async def sessions_export_json(session_id: str) -> Any:
         "updated_at": sess.updated_at,
         "messages": sess.messages,
     })
+
+
+@app.get("/api/export/sessions.json")
+async def sessions_export_all_json() -> Any:
+    return JSONResponse(store.export_all())
+
+
+@app.post("/api/sessions/import.json")
+async def sessions_import_json(payload: Dict[str, Any]) -> Any:
+    mode = (payload.get("mode") or "append").strip()
+    sessions = payload.get("sessions")
+    if not isinstance(sessions, list):
+        raise HTTPException(status_code=400, detail="sessions must be a list")
+    try:
+        stats = store.import_all(sessions, mode=mode)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
+    return {"ok": True, **stats}
+
+
+@app.post("/api/sessions/compact")
+async def sessions_compact() -> Any:
+    stats = store.compact()
+    return {"ok": True, **stats}
 
 
 def _clean_title(s: str) -> str:
@@ -448,6 +472,15 @@ def _make_model_user_text(user_text: str, injected_text: str, has_images: bool) 
     if not model_user_text and has_images:
         model_user_text = "Describe the image and answer any relevant details."
     return model_user_text.strip()
+
+
+@app.post("/api/files/inspect")
+async def files_inspect(payload: Dict[str, Any]) -> Any:
+    files = payload.get("files") or []
+    if files and not isinstance(files, list):
+        raise HTTPException(status_code=400, detail="files must be a list")
+    _, markers, meta = _parse_files(files)
+    return {"ok": True, "markers": markers, "meta": meta}
 
 
 async def _stream_chat_common(

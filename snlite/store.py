@@ -59,6 +59,11 @@ class SessionStore:
                 continue
         return by_id
 
+    def _write_all(self, sessions: List[Session]) -> None:
+        with open(self.path, "w", encoding="utf-8") as f:
+            for sess in sessions:
+                f.write(json.dumps(asdict(sess), ensure_ascii=False) + "\n")
+
     def list_sessions(self) -> List[Dict[str, Any]]:
         by_id = self._materialize()
         items = sorted(by_id.values(), key=lambda x: x.updated_at, reverse=True)
@@ -135,3 +140,69 @@ class SessionStore:
             else:
                 lines.append(f"## {role}\n\n{content}\n")
         return "\n".join(lines)
+
+    def export_all(self) -> Dict[str, Any]:
+        by_id = self._materialize()
+        items = [asdict(s) for s in sorted(by_id.values(), key=lambda x: x.updated_at, reverse=True) if s.title != "__deleted__"]
+        return {
+            "format": "snlite.sessions.backup.v1",
+            "exported_at": time.time(),
+            "count": len(items),
+            "sessions": items,
+        }
+
+    def import_all(self, sessions: List[Dict[str, Any]], mode: str = "append") -> Dict[str, int]:
+        if mode not in ("append", "replace"):
+            raise ValueError("mode must be append or replace")
+
+        existing = self._materialize()
+        imported = 0
+        skipped = 0
+
+        def _to_session(raw: Dict[str, Any]) -> Optional[Session]:
+            try:
+                sid = str(raw.get("id") or "").strip() or uuid4().hex
+                title = str(raw.get("title") or "New Chat").strip() or "New Chat"
+                created_at = float(raw.get("created_at") or time.time())
+                updated_at = float(raw.get("updated_at") or created_at)
+                messages = raw.get("messages") or []
+                if not isinstance(messages, list):
+                    messages = []
+                normalized = []
+                for m in messages:
+                    if isinstance(m, dict) and "role" in m and "content" in m:
+                        normalized.append(m)
+                return Session(id=sid, title=title, created_at=created_at, updated_at=updated_at, messages=normalized)
+            except Exception:
+                return None
+
+        if mode == "replace":
+            existing = {}
+
+        for raw in sessions:
+            if not isinstance(raw, dict):
+                skipped += 1
+                continue
+            sess = _to_session(raw)
+            if not sess:
+                skipped += 1
+                continue
+
+            prev = existing.get(sess.id)
+            if prev and prev.updated_at > sess.updated_at:
+                skipped += 1
+                continue
+            existing[sess.id] = sess
+            imported += 1
+
+        out = sorted(existing.values(), key=lambda x: x.updated_at)
+        self._write_all(out)
+        return {"imported": imported, "skipped": skipped, "total": len(out)}
+
+    def compact(self) -> Dict[str, int]:
+        snapshots = self._load_all_snapshots()
+        before = len(snapshots)
+        by_id = self._materialize()
+        ordered = sorted(by_id.values(), key=lambda x: x.updated_at)
+        self._write_all(ordered)
+        return {"before": before, "after": len(ordered), "saved": max(0, before - len(ordered))}
