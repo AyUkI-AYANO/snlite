@@ -23,8 +23,8 @@ class LocalePluginRecord:
 
 
 ZH_CN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.1.2",
-    "brand.sub": "v7.1.2 · 本地 GenAI",
+    "page.title": "SNLite v7.1.3",
+    "brand.sub": "v7.1.3 · 本地 GenAI",
     "tile.model": "模型",
     "tile.sessions": "会话",
     "tile.params": "参数",
@@ -56,6 +56,7 @@ ZH_CN_MESSAGES: Dict[str, str] = {
     "btn.regenerate": "重新生成",
     "btn.retry": "重试",
     "btn.stop": "停止",
+    "btn.send": "发送",
     "btn.clear_ui": "清空界面",
     "btn.attach_image": "附加图片",
     "btn.remove_image": "移除图片",
@@ -101,6 +102,7 @@ ZH_CN_MESSAGES: Dict[str, str] = {
     "image.default_name": "图片",
     "workspace.title": "思考工作区",
     "workspace.hint": "该面板显示流式 thinking token（Ollama 原生），内容可能不完整或不准确。",
+    "footer.github": "查看项目 GitHub",
     "tip.model": "选择后端与模型。图片输入仅对多模态模型生效。Thinking trace 仅对支持 thinking 的模型生效。",
     "tip.sessions": "每个会话是一条独立聊天。第一轮对话完成后会根据首条用户消息自动生成标题。",
     "tip.params": "这些参数会影响生成风格与随机性。不同模型支持程度不同。",
@@ -177,8 +179,8 @@ ZH_CN_MESSAGES: Dict[str, str] = {
 }
 
 EN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.1.2",
-    "brand.sub": "v7.1.2 · Local GenAI",
+    "page.title": "SNLite v7.1.3",
+    "brand.sub": "v7.1.3 · Local GenAI",
     "tile.model": "Model",
     "tile.sessions": "Sessions",
     "tile.params": "Params",
@@ -210,6 +212,7 @@ EN_MESSAGES: Dict[str, str] = {
     "btn.regenerate": "Regenerate",
     "btn.retry": "Retry",
     "btn.stop": "Stop",
+    "btn.send": "Send",
     "btn.clear_ui": "Clear UI",
     "btn.attach_image": "Attach Image",
     "btn.remove_image": "Remove Image",
@@ -255,6 +258,7 @@ EN_MESSAGES: Dict[str, str] = {
     "image.default_name": "image",
     "workspace.title": "Thinking workspace",
     "workspace.hint": "This panel shows streaming thinking tokens (Ollama native). It may be incomplete or inaccurate.",
+    "footer.github": "View project on GitHub",
     "tip.model": "Choose provider and model. Image input works for multimodal models. Thinking trace works for thinking-capable models.",
     "tip.sessions": "Each session is an independent chat. Title is auto-generated after first round from the first user message.",
     "tip.params": "These params affect style and randomness. Support varies across models.",

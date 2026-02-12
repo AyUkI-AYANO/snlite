@@ -446,7 +446,7 @@ button.ghost:hover{
 /* -------- Middle: Main -------- */
 .main{
   display:grid;
-  grid-template-rows: auto 1fr auto;
+  grid-template-rows: auto 1fr auto auto;
   height:100vh;
   min-width: 0; /* allow flex overflow */
 }
@@ -751,6 +751,22 @@ button.ghost:hover{
   border-radius: 12px;
   border: 1px solid rgba(255,255,255,0.10);
   background: transparent;
+}
+
+
+.app-footer{
+  border-top: 1px solid var(--border);
+  background: rgba(255,255,255,0.015);
+  padding: 8px 14px 10px;
+  text-align: center;
+}
+.app-footer a{
+  color: rgba(125,185,255,0.95);
+  text-decoration: none;
+  font-size: 12px;
+}
+.app-footer a:hover{
+  text-decoration: underline;
 }
 
 /* -------- Right: Workspace -------- */
