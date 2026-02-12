@@ -150,6 +150,13 @@ snlite/
 
 ### Changelog
 
+v7.2.0
+
+Improved
+
+- Sidebar tile expand/collapse now uses a smoother transition curve for a less abrupt unfolding experience
+- Thinking workspace now opens as a right-side slide-in panel, reducing layout jumps and making the popup interaction cleaner
+
 v7.1.3
 
 Fixed
