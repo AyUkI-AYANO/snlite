@@ -226,6 +226,8 @@ button.ghost:hover{
   list-style: none;
   position: relative;
   gap: 8px;
+  min-height: 44px;
+  transition: background .18s ease, box-shadow .2s ease;
 }
 .tile-title:hover{
   background: rgba(255,255,255,0.03);
@@ -233,15 +235,20 @@ button.ghost:hover{
 .tile[open] .tile-title{
   background: rgba(255,255,255,0.04);
 }
+.tile-title:focus-visible{
+  outline: none;
+  box-shadow: inset 0 0 0 1px rgba(125,185,255,0.5), inset 0 0 0 3px rgba(78,161,255,0.18);
+}
 .tile-title::-webkit-details-marker{ display:none; }
 .tile-title::after{
   content: "▸";
   margin-left: auto;
   color: var(--muted);
-  transition: transform .16s ease;
+  transition: transform .24s cubic-bezier(.2,.75,.2,1), color .2s ease;
 }
 .tile[open] .tile-title::after{
   transform: rotate(90deg);
+  color: var(--primary2);
 }
 .tile-meta{
   font-size: 11px;
@@ -260,6 +267,7 @@ button.ghost:hover{
   border-top: 1px solid transparent;
   opacity: 0;
   transform: translateY(-8px);
+  pointer-events: none;
   will-change: max-height, opacity, transform;
   transition: max-height .36s cubic-bezier(.2,.75,.2,1), opacity .24s ease, transform .28s cubic-bezier(.2,.75,.2,1), padding .28s ease, border-color .2s ease;
 }
@@ -267,12 +275,24 @@ button.ghost:hover{
   max-height: var(--tile-body-h, 560px);
   opacity: 1;
   transform: translateY(0);
+  pointer-events: auto;
   padding: 10px 12px 14px 12px;
   border-top-color: rgba(255,255,255,0.06);
 }
 .tile-body .row{ margin-bottom: 10px; }
 .tile-body .row:last-child{ margin-bottom: 0; }
 .row{ display:flex; gap:8px; margin-bottom:8px; }
+
+@media (prefers-reduced-motion: reduce){
+  .tile-title,
+  .tile-title::after,
+  .tile-body{
+    transition: none !important;
+  }
+  .tile-body{
+    transform: none !important;
+  }
+}
 
 .hint{
   font-size: 12px;

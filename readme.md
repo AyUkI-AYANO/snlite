@@ -150,6 +150,14 @@ snlite/
 
 ### Changelog
 
+v7.2.1
+
+Improved
+
+- Refined sidebar tile animation rhythm with clearer chevron state transition and stronger keyboard focus styling
+- Prevented accidental tile collapse when clicking help icons in tile headers, improving control usability
+- Added open-tile auto-scroll alignment and reduced-motion fallback to keep tile interaction smooth and accessible
+
 v7.2.0
 
 Improved
