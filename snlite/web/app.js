@@ -1,4 +1,4 @@
-/* SNLite web app (v7.1.0)
+/* SNLite web app (v7.1.1)
    Vanilla JS only, local-first UI.
 */
 
@@ -44,15 +44,33 @@ function setText(selector, value) {
   if (el) el.textContent = value;
 }
 
+function setAttr(selector, attr, value) {
+  const el = document.querySelector(selector);
+  if (el) el.setAttribute(attr, value);
+}
+
+function setOptionText(selectId, value, text) {
+  const el = document.querySelector(`#${selectId} option[value="${value}"]`);
+  if (el) el.textContent = text;
+}
+
+function setLeadText(selector, text) {
+  const el = document.querySelector(selector);
+  if (!el || !el.firstChild) return;
+  el.firstChild.textContent = `${text} `;
+}
+
 function applyStaticI18n() {
   document.documentElement.lang = i18nState.current === "zh-CN" ? "zh-CN" : i18nState.current;
-  setText('.sidebar .sub', i18nState.current === 'zh-CN' ? 'v7.1.1 · 本地 GenAI' : 'v7.1.1 · Local GenAI');
-  setText('.tile[data-tile="model"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '模型' : 'Model');
-  setText('.tile[data-tile="sessions"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '会话' : 'Sessions');
-  setText('.tile[data-tile="params"] .tile-title > span:first-child', 'Params');
-  setText('.tile[data-tile="archives"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '归档聊天' : 'Archived Chats');
-  setText('.tile[data-tile="thinking"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '思考（Ollama 原生）' : 'Thinking (Ollama native)');
-  setText('.tile[data-tile="ui"] .tile-title > span:first-child', 'UI');
+  document.title = t("page.title");
+
+  setText('.sidebar .sub', t('brand.sub'));
+  setText('.tile[data-tile="model"] .tile-title > span:first-child', t('tile.model'));
+  setText('.tile[data-tile="sessions"] .tile-title > span:first-child', t('tile.sessions'));
+  setText('.tile[data-tile="params"] .tile-title > span:first-child', t('tile.params'));
+  setText('.tile[data-tile="archives"] .tile-title > span:first-child', t('tile.archives'));
+  setText('.tile[data-tile="thinking"] .tile-title > span:first-child', t('tile.thinking'));
+  setText('.tile[data-tile="ui"] .tile-title > span:first-child', t('tile.ui'));
 
   setText('.tile[data-tile="model"] .tile-meta', t('ui.primary'));
   setText('.tile[data-tile="sessions"] .tile-meta', t('ui.primary'));
@@ -61,8 +79,95 @@ function applyStaticI18n() {
   setText('.tile[data-tile="thinking"] .tile-meta', t('ui.secondary'));
   setText('.tile[data-tile="ui"] .tile-meta', t('ui.secondary'));
 
+  setText('#btnRefresh', t('btn.refresh'));
+  setText('#btnLoad', t('btn.load'));
+  setText('#btnUnload', t('btn.unload'));
+  setText('#btnNewSession', t('btn.new'));
+  setText('#btnRenameSession', t('btn.rename'));
+  setText('#btnArchiveSession', t('btn.archive'));
+  setText('#btnDeleteSession', t('btn.delete'));
+  setText('#btnSetGroup', t('btn.set_group'));
+  setText('#btnExport', t('btn.export_md'));
+  setText('#btnExportJson', t('btn.export_json'));
+  setText('#btnExportAll', t('btn.backup_all'));
+  setText('#btnImportAll', t('btn.import'));
+  setText('#btnCompact', t('btn.compact'));
+  setText('#btnRefreshArchives', t('btn.refresh'));
+  setText('#btnDeleteArchive', t('btn.delete_archive'));
+
+  setAttr('#sessionGroup', 'placeholder', t('ph.group_name'));
+  setAttr('#sessionSearch', 'placeholder', t('ph.search_sessions'));
+  setAttr('#archiveContent', 'placeholder', t('ph.archive_content'));
+
+  setLeadText('.tile[data-tile="thinking"] .small', t('thinking.mode'));
+  setOptionText('thinkMode', 'auto', t('think.auto'));
+  setOptionText('thinkMode', 'on', t('think.on'));
+  setOptionText('thinkMode', 'off', t('think.off'));
+  setOptionText('thinkMode', 'low', t('think.low'));
+  setOptionText('thinkMode', 'medium', t('think.medium'));
+  setOptionText('thinkMode', 'high', t('think.high'));
+  setLeadText('.tile[data-tile="thinking"] .switch-title', t('thinking.show_trace'));
+  setText('.tile[data-tile="thinking"] .switch-text .hint', t('thinking.ui_only'));
+
   setText('label[for="langSelect"]', t('ui.language'));
+  setText('.tile[data-tile="ui"] .switch-title', t('ui.autoscroll'));
+  setText('.tile[data-tile="ui"] .switch-text .hint', t('ui.autoscroll_hint'));
+
+  setAttr('#chatSearch', 'placeholder', t('ph.search_chat'));
+  setAttr('#btnSearchPrev', 'title', t('title.prev_match'));
+  setAttr('#btnSearchNext', 'title', t('title.next_match'));
+  setText('#btnCopyLast', t('btn.copy_last'));
+  setAttr('#btnCopyLast', 'title', t('title.copy_last'));
+  setText('#btnRegen', t('btn.regenerate'));
+  setAttr('#btnRegen', 'title', t('title.regenerate'));
+  setAttr('#retryMode', 'title', t('title.retry_mode'));
+  setOptionText('retryMode', 'keep_params', t('retry.keep'));
+  setOptionText('retryMode', 'clean_context', t('retry.clean'));
+  setText('#btnRetry', t('btn.retry'));
+  setAttr('#btnRetry', 'title', t('title.retry_last'));
+  setText('#btnStop', t('btn.stop'));
+  setText('#btnClear', t('btn.clear_ui'));
+  setAttr('#btnClear', 'title', t('title.clear_ui'));
+
+  setLeadText('.system-title', t('system.title'));
+  setText('.system-head .hint', t('system.hint'));
+  setAttr('#systemText', 'placeholder', t('system.placeholder'));
+
+  setLeadText('.composer-label', t('composer.label'));
+  setText('#btnAttach', t('btn.attach_image'));
+  setText('#btnRemoveImage', t('btn.remove_image'));
+  setText('#btnAttachFiles', t('btn.attach_files'));
+  setText('#btnInspectFiles', t('btn.inspect_files'));
+  setText('#imageHint', t('image.hint'));
+  setAttr('#input', 'placeholder', t('ph.message_input'));
+  setText('#btnSend', t('btn.send'));
+
+  setLeadText('.workspace-title', t('workspace.title'));
+  setText('#btnWsClear', t('btn.clear'));
+  setText('#btnWsHide', t('btn.hide'));
+  setText('#workspace .hint', t('workspace.hint'));
+
+  setLeadText('.param:nth-of-type(1) .param-head > span', t('param.temperature'));
+  setLeadText('.param:nth-of-type(2) .param-head > span', t('param.top_p'));
+  setLeadText('.param-grid > div:nth-child(1) > label.small', t('param.max_tokens'));
+  setLeadText('.param-grid > div:nth-child(2) > label.small', t('param.repeat_penalty'));
+
+  setAttr('.tile[data-tile="model"] .help', 'data-tip', t('tip.model'));
+  setAttr('.tile[data-tile="sessions"] .help', 'data-tip', t('tip.sessions'));
+  setAttr('.tile[data-tile="params"] > summary .help', 'data-tip', t('tip.params'));
+  setAttr('.param:nth-of-type(1) .help', 'data-tip', t('tip.temperature'));
+  setAttr('.param:nth-of-type(2) .help', 'data-tip', t('tip.top_p'));
+  setAttr('.param-grid > div:nth-child(1) .help', 'data-tip', t('tip.max_tokens'));
+  setAttr('.param-grid > div:nth-child(2) .help', 'data-tip', t('tip.repeat_penalty'));
+  setAttr('.tile[data-tile="thinking"] > summary .help', 'data-tip', t('tip.thinking'));
+  setAttr('.tile[data-tile="thinking"] .row .small .help', 'data-tip', t('tip.think_mode'));
+  setAttr('.tile[data-tile="thinking"] .switch-title .help', 'data-tip', t('tip.show_trace'));
+  setAttr('.tile[data-tile="ui"] > summary .help', 'data-tip', t('tip.ui_autoscroll'));
+  setAttr('.system-title .help', 'data-tip', t('tip.system_prompt'));
+  setAttr('.composer-label .help', 'data-tip', t('tip.message_input'));
+  setAttr('.workspace-title .help', 'data-tip', t('tip.workspace'));
 }
+
 
 async function initI18n() {
   try {
@@ -89,12 +194,17 @@ async function initI18n() {
     select.value = defaultCode;
     applyStaticI18n();
 
-    select.onchange = () => {
+    select.onchange = async () => {
       i18nState.current = select.value;
       localStorage.setItem(I18N_KEY, i18nState.current);
       applyStaticI18n();
       setLoadedBadge();
-      setStage($('stageBadge').textContent === 'Idle' || $('stageBadge').textContent === '空闲' ? t('status.idle') : $('stageBadge').textContent);
+      if ($('stageBadge').textContent === t('status.idle') || $('stageBadge').textContent === 'Idle' || $('stageBadge').textContent === '空闲') {
+        setStage(t('status.idle'));
+      }
+      await refreshSessions();
+      await refreshArchives();
+      updateRegenButtons();
     };
   } catch (err) {
     console.error('i18n init failed', err);
@@ -555,7 +665,7 @@ function createMessageRow(role, opts = {}) {
 
   const chip = document.createElement("div");
   chip.className = `role-chip ${role === "assistant" ? "ai" : "user"}`;
-  chip.textContent = role === "assistant" ? "Assistant" : "You";
+  chip.textContent = role === "assistant" ? t("role.assistant") : t("role.you");
 
   roleLine.appendChild(chip);
 
@@ -565,7 +675,7 @@ function createMessageRow(role, opts = {}) {
 
     const btnCopy = document.createElement("button");
     btnCopy.className = "msg-action";
-    btnCopy.textContent = "Copy";
+    btnCopy.textContent = t("btn.copy");
     btnCopy.onclick = async () => {
       const ok = await copyTextToClipboard(bubble.dataset.raw || "");
       toast(ok ? t("toast.copied") : t("toast.copy_failed"));
@@ -573,7 +683,7 @@ function createMessageRow(role, opts = {}) {
 
     const btnRegen = document.createElement("button");
     btnRegen.className = "msg-action primary";
-    btnRegen.textContent = "Regenerate";
+    btnRegen.textContent = t("btn.regenerate");
     btnRegen.onclick = async () => {
       await regenerateLast();
     };
@@ -669,19 +779,19 @@ function setAssistantMeta(metaEl, data = {}) {
   if (!metaEl) return;
   const parts = [];
   if (data.fileChars > 0) {
-    parts.push(`File context: ${data.fileChars} chars${data.fileTruncated ? " (truncated)" : ""}`);
+    parts.push(t("meta.file_context", { chars: data.fileChars, truncated: data.fileTruncated ? t("meta.truncated") : "" }));
   }
   if (typeof data.elapsedMs === "number") {
-    parts.push(`Elapsed: ${data.elapsedMs} ms`);
+    parts.push(t("meta.elapsed", { ms: data.elapsedMs }));
   }
   if (typeof data.outputChars === "number") {
-    parts.push(`Output: ${data.outputChars} chars`);
+    parts.push(t("meta.output", { chars: data.outputChars }));
   }
   if (data.cancelled) {
-    parts.push("Stopped by user");
+    parts.push(t("meta.stopped_by_user"));
   }
   if (data.finishReason) {
-    parts.push(`Result: ${data.finishReason}`);
+    parts.push(t("meta.result", { reason: data.finishReason }));
   }
   metaEl.textContent = parts.join(" · ");
 }
@@ -715,10 +825,10 @@ async function refreshModels() {
   await refreshModelListForProvider(providerSelect.value);
 
   const s = data.state.status;
-  if (s === "ready" && state.loaded) setModelStatus(`Ready: ${state.loaded.provider} / ${state.loaded.model_id}`);
-  else if (s === "idle") setModelStatus("Idle. Select a model and Load.");
-  else if (s === "loading") setModelStatus("Loading...");
-  else if (s === "error") setModelStatus(`Error: ${data.state.error || "unknown"}`);
+  if (s === "ready" && state.loaded) setModelStatus(t("status.ready_model", { provider: state.loaded.provider, model: state.loaded.model_id }));
+  else if (s === "idle") setModelStatus(t("status.idle_select_load"));
+  else if (s === "loading") setModelStatus(t("status.loading"));
+  else if (s === "error") setModelStatus(t("status.error", { error: data.state.error || t("status.unknown") }));
   else setModelStatus(s);
 
   syncThinkModeOptions();
@@ -731,7 +841,7 @@ async function refreshModelListForProvider(providerName) {
   if (!provider || !provider.models || provider.models.length === 0) {
     const opt = document.createElement("option");
     opt.value = "";
-    opt.textContent = "(no models found)";
+    opt.textContent = t("status.no_models_found");
     modelSelect.appendChild(opt);
     return;
   }
@@ -752,7 +862,7 @@ async function loadModel() {
   const data = await apiPost("/api/models/load", { provider, model_id, params: {} });
   state.loaded = data.loaded;
   setLoadedBadge();
-  setModelStatus(data.status === "ready" ? `Ready: ${state.loaded.provider} / ${state.loaded.model_id}` : data.status);
+  setModelStatus(data.status === "ready" ? t("status.ready_model", { provider: state.loaded.provider, model: state.loaded.model_id }) : data.status);
   syncThinkModeOptions();
 }
 
@@ -812,7 +922,7 @@ async function refreshSessions() {
 }
 
 async function newSession() {
-  const r = await apiPost("/api/sessions", { title: "New Chat" });
+  const r = await apiPost("/api/sessions", { title: t("session.new_chat") });
   state.currentSessionId = r.id;
   await openSession(r.id);
   await refreshSessions();
@@ -851,7 +961,7 @@ async function setSessionGroup() {
   if (!state.currentSessionId) return;
   const group = ($("sessionGroup")?.value || "").trim();
   if (!group) {
-    alert("请输入分组名称");
+    alert(t("alert.enter_group_name"));
     return;
   }
   await apiPatch(`/api/sessions/${state.currentSessionId}`, { group });
@@ -882,7 +992,7 @@ async function refreshArchives() {
     const active = state.selectedArchiveId === a.archive_id;
     div.className = "archive-item" + (active ? " active" : "");
     const ts = new Date((a.archived_at || 0) * 1000).toLocaleString();
-    div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || "Untitled")}</div><div class="archive-meta">${escapeHtml(a.group || t("session.ungrouped"))} · ${escapeHtml(ts)}</div>`;
+    div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || t("archive.untitled"))}</div><div class="archive-meta">${escapeHtml(a.group || t("session.ungrouped"))} · ${escapeHtml(ts)}</div>`;
     div.onclick = async () => {
       const detail = await apiGet(`/api/archives/${a.archive_id}`);
       state.selectedArchiveId = a.archive_id;
@@ -895,7 +1005,7 @@ async function refreshArchives() {
 
 async function deleteArchive() {
   if (!state.selectedArchiveId) {
-    alert("请先选择一个归档");
+    alert(t("alert.select_archive_first"));
     return;
   }
   const ok = confirm(t("confirm.delete_archive"));
@@ -911,7 +1021,7 @@ async function exportSession() {
   const url = `/api/sessions/${state.currentSessionId}/export.md`;
   const r = await fetch(url);
   if (!r.ok) {
-    alert("Export failed");
+    alert(t("alert.export_failed"));
     return;
   }
   const text = await r.text();
@@ -929,7 +1039,7 @@ async function exportSessionJson() {
   const url = `/api/sessions/${state.currentSessionId}/export.json`;
   const r = await fetch(url);
   if (!r.ok) {
-    alert("Export JSON failed");
+    alert(t("alert.export_json_failed"));
     return;
   }
   const data = await r.json();
@@ -944,7 +1054,7 @@ async function exportSessionJson() {
 async function exportAllSessions() {
   const r = await fetch('/api/export/sessions.json');
   if (!r.ok) {
-    alert('Backup failed');
+    alert(t('alert.backup_failed'));
     return;
   }
   const data = await r.json();
@@ -968,28 +1078,28 @@ async function importAllSessions() {
     try {
       parsed = JSON.parse(await file.text());
     } catch {
-      alert('Invalid JSON file.');
+      alert(t('alert.invalid_json'));
       return;
     }
     const sessions = Array.isArray(parsed?.sessions) ? parsed.sessions : [];
     if (!sessions.length) {
-      alert('No sessions found in backup file.');
+      alert(t('alert.no_sessions_in_backup'));
       return;
     }
-    const replace = confirm('Import mode: OK = replace all local sessions, Cancel = append only.');
+    const replace = confirm(t('confirm.import_mode'));
     const mode = replace ? 'replace' : 'append';
     const result = await apiPost('/api/sessions/import.json', { sessions, mode });
-    alert(`Import done: imported ${result.imported}, skipped ${result.skipped}.`);
+    alert(t('alert.import_done', { imported: result.imported, skipped: result.skipped }));
     await refreshSessions();
   };
   picker.click();
 }
 
 async function compactSessions() {
-  const ok = confirm('Compact local session snapshots now?');
+  const ok = confirm(t('confirm.compact'));
   if (!ok) return;
   const result = await apiPost('/api/sessions/compact', {});
-  alert(`Compaction done: ${result.before} -> ${result.after} snapshots (saved ${result.saved}).`);
+  alert(t('alert.compaction_done', { before: result.before, after: result.after, saved: result.saved }));
 }
 
 async function openSession(sessionId) {
@@ -1020,7 +1130,7 @@ async function stopStreaming() {
 async function maybeAutoTitle(sessionId) {
   try {
     const sess = await apiGet(`/api/sessions/${sessionId}`);
-    if (!(sess.title === "New Chat" || (sess.title || "").startsWith("New Chat"))) return;
+    if (![t("session.new_chat"), "New Chat", "新聊天"].some((x) => sess.title === x || (sess.title || "").startsWith(x))) return;
     const hasUser = (sess.messages || []).some(m => m.role === "user" && (m.content || "").trim().length > 0);
     if (!hasUser) return;
     await apiPost(`/api/sessions/${sessionId}/auto_title`, {});
@@ -1046,7 +1156,7 @@ function setAttachedImage(name, dataUrl) {
 
   $("imageInfo").style.display = "flex";
   $("btnRemoveImage").style.display = "inline-flex";
-  $("imageName").textContent = name || "image";
+  $("imageName").textContent = name || t("image.default_name");
   $("imagePreview").src = dataUrl;
 }
 
@@ -1073,7 +1183,7 @@ function renderFileList() {
   const enabledCount = attachedFiles.filter((f) => f.enabled !== false).length;
   const stat = document.createElement("div");
   stat.className = "hint file-stat";
-  stat.textContent = `Enabled ${enabledCount}/${attachedFiles.length} files. Max ${FILE_MAX_COUNT} files, each <= 6MB.`;
+  stat.textContent = t("files.enabled_summary", { enabled: enabledCount, total: attachedFiles.length, max: FILE_MAX_COUNT });
   box.appendChild(stat);
 
   attachedFiles.forEach((f, idx) => {
@@ -1100,7 +1210,7 @@ function renderFileList() {
 
     const toggle = document.createElement("button");
     toggle.className = "file-remove";
-    toggle.textContent = f.enabled === false ? "Enable" : "Disable";
+    toggle.textContent = f.enabled === false ? t("btn.enable") : t("btn.disable");
     toggle.onclick = () => {
       attachedFiles[idx].enabled = !(attachedFiles[idx].enabled !== false);
       renderFileList();
@@ -1109,7 +1219,7 @@ function renderFileList() {
 
     const btn = document.createElement("button");
     btn.className = "file-remove";
-    btn.textContent = "Remove";
+    btn.textContent = t("btn.remove");
     btn.onclick = () => {
       attachedFiles.splice(idx, 1);
       renderFileList();
@@ -1155,31 +1265,31 @@ function clearFileInspect() {
 async function inspectAttachedFiles() {
   const active = attachedFiles.filter((f) => f.enabled !== false);
   if (!active.length) {
-    alert("No enabled files to inspect.");
+    alert(t("alert.no_enabled_files"));
     clearFileInspect();
     return;
   }
   const btn = $("btnInspectFiles");
   btn.disabled = true;
-  btn.textContent = "Inspecting...";
+  btn.textContent = t("status.inspecting");
   try {
     const result = await apiPost('/api/files/inspect', { files: active });
     const files = result?.meta?.files || [];
     const total = Number(result?.meta?.total_chars || 0);
     const truncated = !!result?.meta?.truncated;
     const lines = files.map((f) => {
-      const flag = f.truncated ? ' · truncated' : '';
-      return `- ${f.name}: ${f.status}, ${f.chars || 0} chars${flag}`;
+      const flag = f.truncated ? t('meta.truncated_short') : '';
+      return t('files.inspect_line', { name: f.name, status: f.status, chars: f.chars || 0, flag });
     });
-    const msg = [`Inspect summary: ${files.length} files, ${total} chars${truncated ? ' (truncated)' : ''}.`, ...lines].join('\n');
+    const msg = [t('files.inspect_summary', { count: files.length, chars: total, truncated: truncated ? t('meta.truncated') : '' }), ...lines].join('\n');
     const el = $("fileInspect");
     el.style.display = "block";
     el.textContent = msg;
   } catch (err) {
-    alert(`Inspect failed: ${err.message}`);
+    alert(t("alert.inspect_failed", { message: err.message }));
   } finally {
     btn.disabled = false;
-    btn.textContent = "Inspect file extraction";
+    btn.textContent = t("btn.inspect_files");
   }
 }
 
@@ -1233,7 +1343,7 @@ async function regenerateLast() {
   $("btnStop").disabled = false;
   updateRegenButtons();
 
-  setStage("Answering…");
+  setStage(t("stage.answering"));
 
   const body = {
     session_id: state.currentSessionId,
@@ -1308,8 +1418,8 @@ async function regenerateLast() {
         if (eventType === "status") {
           try {
             const s = JSON.parse(dataLine);
-            if (s.stage === "thinking") setStage("Thinking…");
-            if (s.stage === "answering") setStage("Answering…");
+            if (s.stage === "thinking") setStage(t("stage.thinking"));
+            if (s.stage === "answering") setStage(t("stage.answering"));
           } catch {}
           continue;
         }
@@ -1339,7 +1449,7 @@ async function regenerateLast() {
         }
 
         if (eventType === "error") {
-          assistantRaw += `\n[Error] ${dataLine}`;
+          assistantRaw += `\n${t("stream.error_prefix")} ${dataLine}`;
           setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
           maybeAutoScroll(false);
           continue;
@@ -1353,13 +1463,13 @@ async function regenerateLast() {
             streamMeta.cancelled = !!obj.cancelled;
             streamMeta.finishReason = obj.finish_reason || "";
             if (obj.finish_reason === "cancelled") {
-              assistantRaw += "\n\n[Generation stopped by user]";
+              assistantRaw += `\n\n${t("stream.generation_stopped")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             } else if (obj.finish_reason === "failed") {
-              assistantRaw += "\n\n[Generation failed]";
+              assistantRaw += `\n\n${t("stream.generation_failed")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             } else if (obj.finish_reason === "interrupted") {
-              assistantRaw += "\n\n[Generation interrupted]";
+              assistantRaw += `\n\n${t("stream.generation_interrupted")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
@@ -1389,7 +1499,7 @@ async function send() {
   if (state.streaming) return;
   if (!state.currentSessionId) await newSession();
   if (!state.loaded) {
-    alert("Please load a model first.");
+    alert(t("alert.load_model_first"));
     return;
   }
 
@@ -1426,7 +1536,7 @@ async function send() {
   wsShow(showTrace);
   if (showTrace) wsClear();
 
-  setStage("Answering…");
+  setStage(t("stage.answering"));
 
   const thinkMode = $("thinkMode").value;
 
@@ -1462,7 +1572,7 @@ async function send() {
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
     setStage(t("status.idle"));
-    setMessageContent(assistantMsg.contentEl, `Error: ${await resp.text()}`, assistantMsg.bubble);
+    setMessageContent(assistantMsg.contentEl, `${t("status.error_prefix")} ${await resp.text()}`, assistantMsg.bubble);
     updateRegenButtons();
     return;
   }
@@ -1516,8 +1626,8 @@ async function send() {
         if (eventType === "status") {
           try {
             const s = JSON.parse(dataLine);
-            if (s.stage === "thinking") setStage("Thinking…");
-            if (s.stage === "answering") setStage("Answering…");
+            if (s.stage === "thinking") setStage(t("stage.thinking"));
+            if (s.stage === "answering") setStage(t("stage.answering"));
           } catch {}
           continue;
         }
@@ -1547,7 +1657,7 @@ async function send() {
         }
 
         if (eventType === "error") {
-          assistantRaw += `\n[Error] ${dataLine}`;
+          assistantRaw += `\n${t("stream.error_prefix")} ${dataLine}`;
           setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
           maybeAutoScroll(false);
           continue;
@@ -1561,13 +1671,13 @@ async function send() {
             streamMeta.cancelled = !!obj.cancelled;
             streamMeta.finishReason = obj.finish_reason || "";
             if (obj.finish_reason === "cancelled") {
-              assistantRaw += "\n\n[Generation stopped by user]";
+              assistantRaw += `\n\n${t("stream.generation_stopped")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             } else if (obj.finish_reason === "failed") {
-              assistantRaw += "\n\n[Generation failed]";
+              assistantRaw += `\n\n${t("stream.generation_failed")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             } else if (obj.finish_reason === "interrupted") {
-              assistantRaw += "\n\n[Generation interrupted]";
+              assistantRaw += `\n\n${t("stream.generation_interrupted")}`;
               setMessageContent(assistantMsg.contentEl, assistantRaw, assistantMsg.bubble);
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
@@ -1667,12 +1777,12 @@ async function init() {
     const file = e.target.files && e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
-      alert("Please choose an image file.");
+      alert(t("alert.choose_image_file"));
       clearAttachedImage();
       return;
     }
     if (file.size > 6 * 1024 * 1024) {
-      alert("Image too large. Please use <= 6MB.");
+      alert(t("alert.image_too_large"));
       clearAttachedImage();
       return;
     }
@@ -1690,11 +1800,11 @@ async function init() {
 
     for (const f of files) {
       if (attachedFiles.length >= FILE_MAX_COUNT) {
-        alert(`Max ${FILE_MAX_COUNT} files allowed.`);
+        alert(t("alert.max_files_allowed", { max: FILE_MAX_COUNT }));
         break;
       }
       if (f.size > FILE_MAX_BYTES) {
-        alert(`File too large (max 6MB): ${f.name}`);
+        alert(t("alert.file_too_large", { name: f.name }));
         continue;
       }
 
