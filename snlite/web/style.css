@@ -140,6 +140,11 @@ body[data-ui-style="uixone"]{
   grid-template-columns: minmax(0, 1fr) 0px;
 }
 
+.app.app-uix8-layout.workspace-open{
+  grid-template-columns: minmax(0, 1fr) 360px;
+}
+
+
 .app.app-uix8-layout .main{
   grid-template-rows: 1fr;
   padding: 18px;
@@ -416,6 +421,17 @@ button.ghost:hover{
 .tile-body .row{ margin-bottom: 10px; }
 .tile-body .row:last-child{ margin-bottom: 0; }
 .row{ display:flex; gap:8px; margin-bottom:8px; }
+
+
+body[data-ui-style="uix8"] .sidebar .tile-title,
+body[data-ui-style="uix8"] .sidebar .tile-title::after,
+body[data-ui-style="uix8"] .sidebar .tile-body{
+  transition: none !important;
+}
+
+body[data-ui-style="uix8"] .sidebar .tile-body{
+  transform: none !important;
+}
 
 @media (prefers-reduced-motion: reduce){
   .tile-title,
@@ -1049,10 +1065,12 @@ button.ghost:hover{
 
 @media (max-width: 1180px){
   .app.app-uix8-layout .main{ padding: 12px; }
+  .app.app-uix8-layout.workspace-open{ grid-template-columns: minmax(0, 1fr) 320px; }
   .uix8-shell{ grid-template-columns: minmax(0, 1fr) 320px; height: calc(100vh - 24px); }
 }
 @media (max-width: 920px){
   .app.app-uix8-layout .main{ padding: 0; }
+  .app.app-uix8-layout.workspace-open{ grid-template-columns: minmax(0, 1fr); }
   .uix8-shell{ grid-template-columns: minmax(0, 1fr); height: 100vh; }
   .uix8-rail{ display:none; }
 }

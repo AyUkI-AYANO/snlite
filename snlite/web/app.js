@@ -248,6 +248,9 @@ function restoreLegacyLayout() {
 
   ref.app.classList.remove('app-uix8-layout');
 
+  const shell = ref.main.querySelector('#uix8Shell');
+  if (shell) shell.remove();
+
   if (ref.sidebar && ref.sidebarParent) {
     if (ref.sidebarNext && ref.sidebarNext.parentElement === ref.sidebarParent) {
       ref.sidebarParent.insertBefore(ref.sidebar, ref.sidebarNext);
