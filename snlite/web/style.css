@@ -135,6 +135,61 @@ body[data-ui-style="uixone"]{
   grid-template-columns: 360px minmax(0, 1fr) 360px;
 }
 
+
+.app.app-uix8-layout{
+  grid-template-columns: minmax(0, 1fr) 0px;
+}
+
+.app.app-uix8-layout .main{
+  grid-template-rows: 1fr;
+  padding: 18px;
+}
+
+.uix8-shell{
+  display:grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 16px;
+  min-height: 0;
+  height: calc(100vh - 36px);
+}
+
+.uix8-stage{
+  display:grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  border: 1px solid color-mix(in srgb, var(--primary2) 22%, var(--border));
+  border-radius: calc(var(--radius-lg) + 4px);
+  overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel2) 72%, transparent), color-mix(in srgb, var(--panel) 88%, transparent));
+  box-shadow: var(--shadow);
+}
+
+.uix8-rail{
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--primary2) 24%, var(--border));
+  border-radius: calc(var(--radius-lg) + 4px);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 96%, transparent), color-mix(in srgb, var(--panel2) 94%, transparent));
+  box-shadow: var(--shadow2);
+  overflow: hidden;
+}
+
+.uix8-rail .sidebar{
+  border-right: 0;
+  border-left: 0;
+  border-radius: 0;
+  height: 100%;
+  padding: 14px;
+}
+
+body[data-ui-style="uix8"] .uix8-stage .topbar,
+body[data-ui-style="uix8"] .uix8-stage .composer,
+body[data-ui-style="uix8"] .uix8-stage .app-footer{
+  background: color-mix(in srgb, var(--card) 72%, transparent);
+}
+
+body[data-ui-style="uix8"] .uix8-stage .chat{
+  padding: 18px;
+}
+
 /* scrollbar */
 *::-webkit-scrollbar{ width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb{
@@ -991,6 +1046,16 @@ button.ghost:hover{
 }
 
 /* -------- Responsive -------- */
+
+@media (max-width: 1180px){
+  .app.app-uix8-layout .main{ padding: 12px; }
+  .uix8-shell{ grid-template-columns: minmax(0, 1fr) 320px; height: calc(100vh - 24px); }
+}
+@media (max-width: 920px){
+  .app.app-uix8-layout .main{ padding: 0; }
+  .uix8-shell{ grid-template-columns: minmax(0, 1fr); height: 100vh; }
+  .uix8-rail{ display:none; }
+}
 @media (max-width: 1180px){
   .app{ grid-template-columns: 320px minmax(0, 1fr) 0px; }
   .app.workspace-open{ grid-template-columns: 320px minmax(0, 1fr) 320px; }
