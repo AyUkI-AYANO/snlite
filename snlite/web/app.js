@@ -1,4 +1,4 @@
-/* SNLite web app (v7.0.2)
+/* SNLite web app (v7.1.0)
    Vanilla JS only, local-first UI.
 */
 
@@ -92,6 +92,34 @@ function positionTooltip(tipEl, targetEl, text) {
 
   tipEl.style.left = `${Math.round(x)}px`;
   tipEl.style.top = `${Math.round(y)}px`;
+}
+
+
+function installSidebarTiles() {
+  const KEY = "snlite.sidebar.tiles.v1";
+  const tiles = Array.from(document.querySelectorAll(".tile[data-tile]"));
+  if (!tiles.length) return;
+
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem(KEY) || "{}");
+  } catch (_) {
+    saved = {};
+  }
+
+  tiles.forEach((tile) => {
+    const name = tile.dataset.tile;
+    if (Object.prototype.hasOwnProperty.call(saved, name)) {
+      tile.open = !!saved[name];
+    }
+    tile.addEventListener("toggle", () => {
+      const next = {};
+      tiles.forEach((t) => {
+        next[t.dataset.tile] = t.open;
+      });
+      localStorage.setItem(KEY, JSON.stringify(next));
+    });
+  });
 }
 
 function installHelpTooltips() {
@@ -1487,6 +1515,7 @@ async function send() {
 
 /* ---------- Init ---------- */
 async function init() {
+  installSidebarTiles();
   installHelpTooltips(); // ✅ v0.5.2
 
   $("btnRefresh").onclick = refreshModels;

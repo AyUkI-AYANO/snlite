@@ -157,6 +157,12 @@ button.ghost:hover{
   backdrop-filter: blur(6px);
 }
 
+.tile-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
 .brand{
   display:flex;
   gap:12px;
@@ -185,7 +191,7 @@ button.ghost:hover{
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 12px;
-  margin-bottom: 12px;
+  margin-bottom: 0;
   background: rgba(255,255,255,0.02);
   box-shadow: 0 0 0 1px rgba(255,255,255,0.015) inset;
 }
@@ -197,6 +203,41 @@ button.ghost:hover{
   align-items:center;
   justify-content: space-between;
 }
+.tile{
+  padding: 0;
+  overflow: hidden;
+}
+.tile-title{
+  margin: 0;
+  padding: 12px;
+  cursor: pointer;
+  list-style: none;
+  position: relative;
+  gap: 8px;
+}
+.tile-title::-webkit-details-marker{ display:none; }
+.tile-title::after{
+  content: "▸";
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform .16s ease;
+}
+.tile[open] .tile-title::after{
+  transform: rotate(90deg);
+}
+.tile-meta{
+  font-size: 11px;
+  color: var(--primary2);
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid rgba(125,185,255,0.28);
+  background: rgba(78,161,255,0.12);
+}
+.tile-body{
+  padding: 0 12px 12px 12px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.tile:not([open]) .tile-body{ display:none; }
 .row{ display:flex; gap:8px; margin-bottom:8px; }
 
 .hint{
