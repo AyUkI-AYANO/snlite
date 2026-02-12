@@ -1,4 +1,4 @@
-/* SNLite web app (v7.1.3)
+/* SNLite web app (v7.2.0)
    Vanilla JS only, local-first UI.
 */
 
@@ -801,8 +801,8 @@ function setAssistantMeta(metaEl, data = {}) {
 function wsClear() { $("wsText").textContent = ""; }
 function wsShow(show) {
   const ws = $("workspace");
-  if (show) ws.classList.remove("hidden");
-  else ws.classList.add("hidden");
+  ws.classList.toggle("hidden", !show);
+  ws.setAttribute("aria-hidden", show ? "false" : "true");
 }
 
 /* ---------- Models ---------- */
