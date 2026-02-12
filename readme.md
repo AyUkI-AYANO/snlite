@@ -9,6 +9,10 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 
 ## Features
 
+- **Language switch + locale plugin support (v7.1.1)**
+  - Switch whole UI between Chinese/English
+  - Extensible locale plugins via Python entry points (`snlite.locales`)
+
 - **Ollama native thinking support**
   - Separates `thinking` and final answer
   - Optional right-side workspace for trace inspection
@@ -145,6 +149,19 @@ snlite/
 ---
 
 ### Changelog
+
+v7.1.1
+
+Fixed
+
+- Fixed tile meta badge wrapping issue where Chinese "次要" could render vertically in narrow badge chips
+
+Added
+
+- Added in-app language selector (Chinese / English)
+- Added locale plugin support via Python entry points (`snlite.locales`)
+- Added locale diagnostics API: `/api/i18n/locales`
+- Added locale plugin development guide: `docs/locale-plugin-guide.md`
 
 v7.1.0
 

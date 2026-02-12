@@ -22,6 +22,86 @@ let attachedFiles = []; // {name, mime, size, b64}
 const FILE_MAX_BYTES = 6 * 1024 * 1024;
 const FILE_MAX_COUNT = 3;
 
+const I18N_KEY = "snlite.ui.lang.v1";
+const i18nState = {
+  current: "zh-CN",
+  fallback: "en",
+  locales: {},
+};
+
+function t(key, vars = {}) {
+  const active = i18nState.locales[i18nState.current]?.messages || {};
+  const fallback = i18nState.locales[i18nState.fallback]?.messages || {};
+  let text = active[key] || fallback[key] || key;
+  for (const [k, v] of Object.entries(vars)) {
+    text = text.replaceAll(`{${k}}`, String(v));
+  }
+  return text;
+}
+
+function setText(selector, value) {
+  const el = document.querySelector(selector);
+  if (el) el.textContent = value;
+}
+
+function applyStaticI18n() {
+  document.documentElement.lang = i18nState.current === "zh-CN" ? "zh-CN" : i18nState.current;
+  setText('.sidebar .sub', i18nState.current === 'zh-CN' ? 'v7.1.1 · 本地 GenAI' : 'v7.1.1 · Local GenAI');
+  setText('.tile[data-tile="model"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '模型' : 'Model');
+  setText('.tile[data-tile="sessions"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '会话' : 'Sessions');
+  setText('.tile[data-tile="params"] .tile-title > span:first-child', 'Params');
+  setText('.tile[data-tile="archives"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '归档聊天' : 'Archived Chats');
+  setText('.tile[data-tile="thinking"] .tile-title > span:first-child', i18nState.current === 'zh-CN' ? '思考（Ollama 原生）' : 'Thinking (Ollama native)');
+  setText('.tile[data-tile="ui"] .tile-title > span:first-child', 'UI');
+
+  setText('.tile[data-tile="model"] .tile-meta', t('ui.primary'));
+  setText('.tile[data-tile="sessions"] .tile-meta', t('ui.primary'));
+  setText('.tile[data-tile="params"] .tile-meta', t('ui.common'));
+  setText('.tile[data-tile="archives"] .tile-meta', t('ui.secondary'));
+  setText('.tile[data-tile="thinking"] .tile-meta', t('ui.secondary'));
+  setText('.tile[data-tile="ui"] .tile-meta', t('ui.secondary'));
+
+  setText('label[for="langSelect"]', t('ui.language'));
+}
+
+async function initI18n() {
+  try {
+    const data = await apiGet('/api/i18n/locales');
+    const map = {};
+    for (const item of (data.locales || [])) {
+      map[item.code] = item;
+    }
+    i18nState.locales = map;
+    i18nState.fallback = map.en ? 'en' : (Object.keys(map)[0] || 'zh-CN');
+
+    const select = $('langSelect');
+    select.innerHTML = '';
+    for (const code of Object.keys(map)) {
+      const opt = document.createElement('option');
+      opt.value = code;
+      opt.textContent = map[code].name || code;
+      select.appendChild(opt);
+    }
+
+    const saved = localStorage.getItem(I18N_KEY);
+    const defaultCode = map[saved] ? saved : (map[(data.default || '')] ? data.default : i18nState.fallback);
+    i18nState.current = defaultCode;
+    select.value = defaultCode;
+    applyStaticI18n();
+
+    select.onchange = () => {
+      i18nState.current = select.value;
+      localStorage.setItem(I18N_KEY, i18nState.current);
+      applyStaticI18n();
+      setLoadedBadge();
+      setStage($('stageBadge').textContent === 'Idle' || $('stageBadge').textContent === '空闲' ? t('status.idle') : $('stageBadge').textContent);
+    };
+  } catch (err) {
+    console.error('i18n init failed', err);
+  }
+}
+
+
 /* ---------------------------
    Tooltip Manager (v0.5.2) ✅
    - render tooltip in <body>
@@ -369,7 +449,7 @@ function updateParamLabels() {
 }
 
 function setStage(text) {
-  $("stageBadge").textContent = text || "Idle";
+  $("stageBadge").textContent = text || t("status.idle");
 }
 
 function setModelStatus(text) {
@@ -379,7 +459,7 @@ function setModelStatus(text) {
 function setLoadedBadge() {
   const b = $("loadedBadge");
   if (!state.loaded) {
-    b.textContent = "No model";
+    b.textContent = t("status.no_model");
     b.style.color = "var(--muted)";
     return;
   }
@@ -488,7 +568,7 @@ function createMessageRow(role, opts = {}) {
     btnCopy.textContent = "Copy";
     btnCopy.onclick = async () => {
       const ok = await copyTextToClipboard(bubble.dataset.raw || "");
-      toast(ok ? "Copied" : "Copy failed");
+      toast(ok ? t("toast.copied") : t("toast.copy_failed"));
     };
 
     const btnRegen = document.createElement("button");
@@ -616,7 +696,7 @@ function wsShow(show) {
 
 /* ---------- Models ---------- */
 async function refreshModels() {
-  setModelStatus("Refreshing...");
+  setModelStatus(t("status.refreshing"));
   const data = await apiGet("/api/models");
   state.providers = data.providers;
   state.loaded = data.state.loaded;
@@ -668,7 +748,7 @@ async function loadModel() {
   const provider = $("providerSelect").value;
   const model_id = $("modelSelect").value;
   if (!model_id) return;
-  setModelStatus("Loading...");
+  setModelStatus(t("status.loading"));
   const data = await apiPost("/api/models/load", { provider, model_id, params: {} });
   state.loaded = data.loaded;
   setLoadedBadge();
@@ -680,7 +760,7 @@ async function unloadModel() {
   const data = await apiPost("/api/models/unload", {});
   state.loaded = data.loaded;
   setLoadedBadge();
-  setModelStatus("Unloaded.");
+  setModelStatus(t("status.unloaded"));
   syncThinkModeOptions();
 }
 
@@ -700,7 +780,7 @@ async function refreshSessions() {
 
   const grouped = new Map();
   for (const s of filtered) {
-    const groupName = (s.group || "未分组").trim() || "未分组";
+    const groupName = (s.group || t("session.ungrouped")).trim() || t("session.ungrouped");
     if (!grouped.has(groupName)) grouped.set(groupName, []);
     grouped.get(groupName).push(s);
   }
@@ -714,7 +794,7 @@ async function refreshSessions() {
     for (const s of list) {
       const div = document.createElement("div");
       div.className = "session-item" + (state.currentSessionId === s.id ? " active" : "");
-      div.innerHTML = `<span class="session-title">${escapeHtml(s.title || "New Chat")}</span><span class="session-meta">${escapeHtml(groupName)}</span>`;
+      div.innerHTML = `<span class="session-title">${escapeHtml(s.title || t("session.new_chat"))}</span><span class="session-meta">${escapeHtml(groupName)}</span>`;
       div.onclick = async () => {
         state.currentSessionId = s.id;
         await openSession(s.id);
@@ -740,7 +820,7 @@ async function newSession() {
 
 async function renameSession() {
   if (!state.currentSessionId) return;
-  const title = prompt("New title:");
+  const title = prompt(t("prompt.new_title"));
   if (!title) return;
   await apiPatch(`/api/sessions/${state.currentSessionId}`, { title });
   await refreshSessions();
@@ -748,7 +828,7 @@ async function renameSession() {
 
 async function archiveSession() {
   if (!state.currentSessionId) return;
-  const ok = confirm("Archive this session? It will be removed and saved as TXT.");
+  const ok = confirm(t("confirm.archive"));
   if (!ok) return;
   await apiDelete(`/api/sessions/${state.currentSessionId}`);
   state.currentSessionId = null;
@@ -759,7 +839,7 @@ async function archiveSession() {
 
 async function deleteSession() {
   if (!state.currentSessionId) return;
-  const ok = confirm("Delete this session permanently without archiving? This cannot be undone.");
+  const ok = confirm(t("confirm.delete_session"));
   if (!ok) return;
   await apiDelete(`/api/sessions/${state.currentSessionId}/hard`);
   state.currentSessionId = null;
@@ -787,7 +867,7 @@ async function refreshArchives() {
     $("archiveContent").value = "";
     const empty = document.createElement("div");
     empty.className = "hint";
-    empty.textContent = "暂无归档";
+    empty.textContent = t("archive.none");
     box.appendChild(empty);
     return;
   }
@@ -802,7 +882,7 @@ async function refreshArchives() {
     const active = state.selectedArchiveId === a.archive_id;
     div.className = "archive-item" + (active ? " active" : "");
     const ts = new Date((a.archived_at || 0) * 1000).toLocaleString();
-    div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || "Untitled")}</div><div class="archive-meta">${escapeHtml(a.group || "未分组")} · ${escapeHtml(ts)}</div>`;
+    div.innerHTML = `<div class="archive-title">${escapeHtml(a.title || "Untitled")}</div><div class="archive-meta">${escapeHtml(a.group || t("session.ungrouped"))} · ${escapeHtml(ts)}</div>`;
     div.onclick = async () => {
       const detail = await apiGet(`/api/archives/${a.archive_id}`);
       state.selectedArchiveId = a.archive_id;
@@ -818,7 +898,7 @@ async function deleteArchive() {
     alert("请先选择一个归档");
     return;
   }
-  const ok = confirm("Delete selected archive permanently?");
+  const ok = confirm(t("confirm.delete_archive"));
   if (!ok) return;
   await apiDelete(`/api/archives/${state.selectedArchiveId}`);
   state.selectedArchiveId = null;
@@ -1129,7 +1209,7 @@ async function copyLastAssistant() {
   const last = getLastAssistantRow();
   if (!last) return;
   const ok = await copyTextToClipboard(getRawFromAssistantRow(last));
-  toast(ok ? "Copied" : "Copy failed");
+  toast(ok ? t("toast.copied") : t("toast.copy_failed"));
 }
 
 async function regenerateLast() {
@@ -1171,7 +1251,7 @@ async function regenerateLast() {
     state.streaming = false;
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
-    setStage("Idle");
+    setStage(t("status.idle"));
     const err = await resp.text();
     setMessageContent(assistantMsg.contentEl, `Error: ${err}`, assistantMsg.bubble);
     updateRegenButtons();
@@ -1284,7 +1364,7 @@ async function regenerateLast() {
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
           } catch {}
-          setStage("Idle");
+          setStage(t("status.idle"));
           maybeAutoScroll(false);
           continue;
         }
@@ -1295,7 +1375,7 @@ async function regenerateLast() {
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
     state.requestId = null;
-    setStage("Idle");
+    setStage(t("status.idle"));
 
     await refreshSessions();
     updateRegenButtons();
@@ -1381,7 +1461,7 @@ async function send() {
     state.streaming = false;
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
-    setStage("Idle");
+    setStage(t("status.idle"));
     setMessageContent(assistantMsg.contentEl, `Error: ${await resp.text()}`, assistantMsg.bubble);
     updateRegenButtons();
     return;
@@ -1492,7 +1572,7 @@ async function send() {
             }
             setAssistantMeta(assistantMsg.metaEl, streamMeta);
           } catch {}
-          setStage("Idle");
+          setStage(t("status.idle"));
           maybeAutoScroll(false);
           continue;
         }
@@ -1503,7 +1583,7 @@ async function send() {
     $("btnSend").disabled = false;
     $("btnStop").disabled = true;
     state.requestId = null;
-    setStage("Idle");
+    setStage(t("status.idle"));
 
     await maybeAutoTitle(state.currentSessionId);
     await refreshSessions();
@@ -1517,6 +1597,7 @@ async function send() {
 async function init() {
   installSidebarTiles();
   installHelpTooltips(); // ✅ v0.5.2
+  await initI18n();
 
   $("btnRefresh").onclick = refreshModels;
   $("btnLoad").onclick = loadModel;
@@ -1636,7 +1717,7 @@ async function init() {
   clearAttachedImage();
   clearAttachedFiles();
 
-  setStage("Idle");
+  setStage(t("status.idle"));
   await refreshModels();
   await refreshSessions();
   await refreshArchives();
@@ -1649,6 +1730,6 @@ async function init() {
 
 init().catch(err => {
   console.error(err);
-  setModelStatus("Init error: " + err.message);
-  setStage("Idle");
+  setModelStatus(t("status.init_error", { message: err.message }));
+  setStage(t("status.idle"));
 });
