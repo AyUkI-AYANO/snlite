@@ -150,6 +150,17 @@ snlite/
 
 ### Changelog
 
+v8.0.0
+
+Added
+
+- Introduced three switchable UI styles: **UIx8** (new elegant default), **UIx7** (legacy classic), and **UIxOne** (new minimalist mode)
+- Added in-app UI style selector in the UI tile; style preference is persisted locally
+
+Improved
+
+- Refreshed overall visual language with softer gradients, more modern spacing/radius rhythm, and a more polished panel appearance
+
 v7.2.1
 
 Improved

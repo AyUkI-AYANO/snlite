@@ -1,4 +1,4 @@
-/* SNLite web app (v7.2.1)
+/* SNLite web app (v8.0.0)
    Vanilla JS only, local-first UI.
 */
 
@@ -23,6 +23,7 @@ const FILE_MAX_BYTES = 6 * 1024 * 1024;
 const FILE_MAX_COUNT = 3;
 
 const I18N_KEY = "snlite.ui.lang.v1";
+const UI_STYLE_KEY = "snlite.ui.style.v1";
 const i18nState = {
   current: "zh-CN",
   fallback: "en",
@@ -110,6 +111,10 @@ function applyStaticI18n() {
   setText('.tile[data-tile="thinking"] .switch-text .hint', t('thinking.ui_only'));
 
   setText('label[for="langSelect"]', t('ui.language'));
+  setText('label[for="uiStyleSelect"]', t('ui.style'));
+  setOptionText('uiStyleSelect', 'uix8', t('ui.style_uix8'));
+  setOptionText('uiStyleSelect', 'uix7', t('ui.style_uix7'));
+  setOptionText('uiStyleSelect', 'uixone', t('ui.style_uixone'));
   setText('.tile[data-tile="ui"] .switch-title', t('ui.autoscroll'));
   setText('.tile[data-tile="ui"] .switch-text .hint', t('ui.autoscroll_hint'));
 
@@ -169,6 +174,135 @@ function applyStaticI18n() {
   setAttr('.workspace-title .help', 'data-tip', t('tip.workspace'));
 
   document.querySelectorAll('.tile[data-tile]').forEach((tile) => syncTileBodyHeight(tile));
+}
+
+const uiLayoutState = {
+  original: null,
+};
+
+function rememberOriginalPlacement() {
+  if (uiLayoutState.original) return;
+
+  const app = document.querySelector('.app');
+  const main = document.querySelector('.main');
+  const sidebar = document.querySelector('.sidebar');
+  const topbar = document.querySelector('.topbar');
+  const chat = document.querySelector('.chat');
+  const composer = document.querySelector('.composer');
+  const footer = document.querySelector('.app-footer');
+
+  uiLayoutState.original = {
+    app,
+    main,
+    sidebar,
+    topbar,
+    chat,
+    composer,
+    footer,
+    sidebarParent: sidebar?.parentElement || null,
+    sidebarNext: sidebar?.nextElementSibling || null,
+    topbarParent: topbar?.parentElement || null,
+    topbarNext: topbar?.nextElementSibling || null,
+    chatParent: chat?.parentElement || null,
+    chatNext: chat?.nextElementSibling || null,
+    composerParent: composer?.parentElement || null,
+    composerNext: composer?.nextElementSibling || null,
+    footerParent: footer?.parentElement || null,
+    footerNext: footer?.nextElementSibling || null,
+  };
+}
+
+function mountUIx8Layout() {
+  rememberOriginalPlacement();
+  const ref = uiLayoutState.original;
+  if (!ref || !ref.app || !ref.main) return;
+
+  ref.app.classList.add('app-uix8-layout');
+
+  let shell = ref.main.querySelector('#uix8Shell');
+  if (!shell) {
+    shell = document.createElement('div');
+    shell.id = 'uix8Shell';
+    shell.className = 'uix8-shell';
+    shell.innerHTML = `
+      <section class="uix8-stage" id="uix8Stage"></section>
+      <aside class="uix8-rail" id="uix8Rail"></aside>
+    `;
+    ref.main.prepend(shell);
+  }
+
+  const stage = shell.querySelector('#uix8Stage');
+  const rail = shell.querySelector('#uix8Rail');
+  if (!stage || !rail) return;
+
+  if (ref.topbar) stage.appendChild(ref.topbar);
+  if (ref.chat) stage.appendChild(ref.chat);
+  if (ref.composer) stage.appendChild(ref.composer);
+  if (ref.footer) stage.appendChild(ref.footer);
+  if (ref.sidebar) rail.appendChild(ref.sidebar);
+}
+
+function restoreLegacyLayout() {
+  const ref = uiLayoutState.original;
+  if (!ref || !ref.app || !ref.main) return;
+
+  ref.app.classList.remove('app-uix8-layout');
+
+  const shell = ref.main.querySelector('#uix8Shell');
+  if (shell) shell.remove();
+
+  if (ref.sidebar && ref.sidebarParent) {
+    if (ref.sidebarNext && ref.sidebarNext.parentElement === ref.sidebarParent) {
+      ref.sidebarParent.insertBefore(ref.sidebar, ref.sidebarNext);
+    } else {
+      ref.sidebarParent.appendChild(ref.sidebar);
+    }
+  }
+
+  const restoreNode = (node, parent, next) => {
+    if (!node || !parent) return;
+    if (next && next.parentElement === parent) {
+      parent.insertBefore(node, next);
+      return;
+    }
+    parent.appendChild(node);
+  };
+
+  restoreNode(ref.topbar, ref.topbarParent, ref.topbarNext);
+  restoreNode(ref.chat, ref.chatParent, ref.chatNext);
+  restoreNode(ref.composer, ref.composerParent, ref.composerNext);
+  restoreNode(ref.footer, ref.footerParent, ref.footerNext);
+}
+
+function applyUIStyle(styleName) {
+  const style = ["uix8", "uix7", "uixone"].includes(styleName) ? styleName : "uix8";
+  document.body.setAttribute("data-ui-style", style);
+
+  if (style === 'uix8') {
+    mountUIx8Layout();
+  } else {
+    restoreLegacyLayout();
+  }
+
+  const select = $("uiStyleSelect");
+  if (select && select.value !== style) {
+    select.value = style;
+  }
+}
+
+function initUIStyle() {
+  const select = $("uiStyleSelect");
+  const saved = localStorage.getItem(UI_STYLE_KEY);
+  const initial = ["uix8", "uix7", "uixone"].includes(saved) ? saved : "uix8";
+  applyUIStyle(initial);
+  if (select) {
+    select.value = initial;
+    select.onchange = () => {
+      const nextStyle = select.value;
+      localStorage.setItem(UI_STYLE_KEY, nextStyle);
+      applyUIStyle(nextStyle);
+    };
+  }
 }
 
 
@@ -1746,6 +1880,7 @@ async function send() {
 
 /* ---------- Init ---------- */
 async function init() {
+  initUIStyle();
   installSidebarTiles();
   installHelpTooltips(); // ✅ v0.5.2
   await initI18n();
