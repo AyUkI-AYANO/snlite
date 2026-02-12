@@ -3,11 +3,18 @@
 **SNLite** is a lightweight, local-first GenAI chat UI built on top of **Ollama**.  
 It runs entirely on `localhost`, focuses on clarity and hackability, and exposes advanced features like **native thinking traces**, **image input**, and **document-assisted chat** without becoming bloated.
 
+> Neo 8.0.0 branch adds an experimental large-scale visual redesign for faster workflows and clearer information hierarchy.
+
 > Minimal UI · Streaming · Local only · No cloud lock-in
 
 ---
 
 ## Features
+
+- **Neo 8.0.0 experimental UI overhaul**
+  - New glassmorphism-inspired layout with stronger visual hierarchy
+  - Expanded top navigation context and sidebar status banner
+  - Better contrast and spacing for heavy multi-session usage
 
 - **Language switch + locale plugin support (v7.1.1)**
   - Switch whole UI between Chinese/English
