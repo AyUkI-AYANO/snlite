@@ -9,7 +9,7 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 
 ## Features
 
-- **Language switch + locale plugin support (v7.1.1)**
+- **Language switch + locale plugin support (v7.1.2)**
   - Switch whole UI between Chinese/English
   - Extensible locale plugins via Python entry points (`snlite.locales`)
 
@@ -149,6 +149,18 @@ snlite/
 ---
 
 ### Changelog
+
+v7.1.2
+
+Fixed
+
+- Avoided provider plugin duplicate-name traceback on startup; duplicate plugins are now skipped with a non-fatal warning
+
+Improved
+
+- Refined sidebar tile header hover/open feedback for better visual clarity
+- Added stronger keyboard focus style for buttons
+- Made top search input width adaptive for different window sizes
 
 v7.1.1
 
