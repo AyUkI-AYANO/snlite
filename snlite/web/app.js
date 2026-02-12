@@ -1,4 +1,4 @@
-/* SNLite web app (v7.1.2)
+/* SNLite web app (v7.1.3)
    Vanilla JS only, local-first UI.
 */
 
@@ -146,6 +146,7 @@ function applyStaticI18n() {
   setText('#btnWsClear', t('btn.clear'));
   setText('#btnWsHide', t('btn.hide'));
   setText('#workspace .hint', t('workspace.hint'));
+  setText('#githubLink', t('footer.github'));
 
   setLeadText('.param:nth-of-type(1) .param-head > span', t('param.temperature'));
   setLeadText('.param:nth-of-type(2) .param-head > span', t('param.top_p'));

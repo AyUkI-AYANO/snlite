@@ -9,7 +9,7 @@ It runs entirely on `localhost`, focuses on clarity and hackability, and exposes
 
 ## Features
 
-- **Language switch + locale plugin support (v7.1.2)**
+- **Language switch + locale plugin support (v7.1.3)**
   - Switch whole UI between Chinese/English
   - Extensible locale plugins via Python entry points (`snlite.locales`)
 
@@ -149,6 +149,16 @@ snlite/
 ---
 
 ### Changelog
+
+v7.1.3
+
+Fixed
+
+- Added missing `btn.send` locale key so the send button no longer falls back to raw key text
+
+Added
+
+- Added a footer link to open the project GitHub page directly from the app
 
 v7.1.2
 
