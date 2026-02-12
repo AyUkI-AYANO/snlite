@@ -216,6 +216,9 @@ button.ghost:hover{
   padding: 0;
   overflow: hidden;
 }
+.tile > summary{ display:list-item; }
+.tile > :not(summary){ display:block; }
+
 .tile-title{
   margin: 0;
   padding: 12px;

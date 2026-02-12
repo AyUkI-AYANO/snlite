@@ -292,7 +292,10 @@ function syncTileBodyHeight(tile) {
   if (!tile) return;
   const body = tile.querySelector(":scope > .tile-body");
   if (!body) return;
-  body.style.setProperty("--tile-body-h", `${body.scrollHeight}px`);
+  const h = Math.max(body.scrollHeight, body.offsetHeight, 0);
+  if (h > 0) {
+    body.style.setProperty("--tile-body-h", `${h}px`);
+  }
 }
 
 function installSidebarTiles() {
@@ -316,7 +319,9 @@ function installSidebarTiles() {
     }
     syncTileBodyHeight(tile);
     tile.addEventListener("toggle", () => {
-      syncTileBodyHeight(tile);
+      if (tile.open) {
+        requestAnimationFrame(() => syncTileBodyHeight(tile));
+      }
       const next = {};
       tiles.forEach((t) => {
         next[t.dataset.tile] = t.open;
