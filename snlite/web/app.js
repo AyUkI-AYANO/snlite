@@ -1,4 +1,4 @@
-/* SNLite web app (v7.2.0)
+/* SNLite web app (v7.2.1)
    Vanilla JS only, local-first UI.
 */
 
@@ -314,13 +314,31 @@ function installSidebarTiles() {
 
   tiles.forEach((tile) => {
     const name = tile.dataset.tile;
+    const summary = tile.querySelector(":scope > summary");
     if (Object.prototype.hasOwnProperty.call(saved, name)) {
       tile.open = !!saved[name];
     }
     syncTileBodyHeight(tile);
+
+    if (summary) {
+      summary.setAttribute("aria-expanded", tile.open ? "true" : "false");
+      summary.querySelectorAll(".help").forEach((helpEl) => {
+        helpEl.addEventListener("click", (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+        });
+      });
+    }
+
     tile.addEventListener("toggle", () => {
+      if (summary) {
+        summary.setAttribute("aria-expanded", tile.open ? "true" : "false");
+      }
       if (tile.open) {
         requestAnimationFrame(() => syncTileBodyHeight(tile));
+        requestAnimationFrame(() => {
+          tile.scrollIntoView({ block: "nearest", behavior: "smooth" });
+        });
       }
       const next = {};
       tiles.forEach((t) => {
