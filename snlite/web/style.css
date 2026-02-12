@@ -121,6 +121,11 @@ button:hover{
 }
 button:active{ transform: translateY(1px); }
 button:disabled{ opacity: .55; cursor:not-allowed; box-shadow:none; }
+button:focus-visible{
+  outline: none;
+  border-color: rgba(125,185,255,0.6);
+  box-shadow: 0 0 0 3px rgba(78,161,255,0.25);
+}
 
 button.primary{
   background: linear-gradient(180deg, rgba(78,161,255,0.26), rgba(78,161,255,0.14));
@@ -215,6 +220,12 @@ button.ghost:hover{
   position: relative;
   gap: 8px;
 }
+.tile-title:hover{
+  background: rgba(255,255,255,0.03);
+}
+.tile[open] .tile-title{
+  background: rgba(255,255,255,0.04);
+}
 .tile-title::-webkit-details-marker{ display:none; }
 .tile-title::after{
   content: "▸";
@@ -236,10 +247,12 @@ button.ghost:hover{
   word-break: keep-all;
 }
 .tile-body{
-  padding: 0 12px 12px 12px;
+  padding: 10px 12px 14px 12px;
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .tile:not([open]) .tile-body{ display:none; }
+.tile-body .row{ margin-bottom: 10px; }
+.tile-body .row:last-child{ margin-bottom: 0; }
 .row{ display:flex; gap:8px; margin-bottom:8px; }
 
 .hint{
@@ -857,7 +870,7 @@ button.ghost:hover{
   padding: 5px;
 }
 .search-inline input{
-  width: 210px;
+  width: clamp(170px, 22vw, 260px);
   background: rgba(255,255,255,0.04);
   border-color: rgba(255,255,255,0.11);
 }

@@ -23,8 +23,8 @@ class LocalePluginRecord:
 
 
 ZH_CN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.1.1",
-    "brand.sub": "v7.1.1 · 本地 GenAI",
+    "page.title": "SNLite v7.1.2",
+    "brand.sub": "v7.1.2 · 本地 GenAI",
     "tile.model": "模型",
     "tile.sessions": "会话",
     "tile.params": "参数",
@@ -177,8 +177,8 @@ ZH_CN_MESSAGES: Dict[str, str] = {
 }
 
 EN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.1.1",
-    "brand.sub": "v7.1.1 · Local GenAI",
+    "page.title": "SNLite v7.1.2",
+    "brand.sub": "v7.1.2 · Local GenAI",
     "tile.model": "Model",
     "tile.sessions": "Sessions",
     "tile.params": "Params",

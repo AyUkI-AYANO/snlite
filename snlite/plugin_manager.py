@@ -86,7 +86,21 @@ def load_provider_plugins() -> tuple[Dict[str, Provider], List[PluginRecord]]:
             if not provider_name:
                 raise ValueError("provider name is empty")
             if provider_name in providers:
-                raise ValueError(f"provider name conflict: {provider_name}")
+                records.append(
+                    PluginRecord(
+                        name=plugin_name,
+                        source="entrypoint",
+                        module=module_name,
+                        loaded=False,
+                        error=f"provider name conflict: {provider_name} (skipped duplicate)",
+                    )
+                )
+                logger.warning(
+                    "skip provider plugin %s because provider name %s is already registered",
+                    plugin_name,
+                    provider_name,
+                )
+                continue
             providers[provider_name] = provider
             records.append(
                 PluginRecord(
