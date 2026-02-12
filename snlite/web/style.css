@@ -247,10 +247,12 @@ button.ghost:hover{
   word-break: keep-all;
 }
 .tile-body{
-  padding: 0 12px 12px 12px;
+  padding: 10px 12px 14px 12px;
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .tile:not([open]) .tile-body{ display:none; }
+.tile-body .row{ margin-bottom: 10px; }
+.tile-body .row:last-child{ margin-bottom: 0; }
 .row{ display:flex; gap:8px; margin-bottom:8px; }
 
 .hint{
