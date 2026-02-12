@@ -146,6 +146,18 @@ snlite/
 
 ### Changelog
 
+v7.1.0
+
+Added
+
+- Sidebar now uses **collapsible tile cards** to reduce visual clutter while keeping quick access to key actions
+- Tile expand/collapse state is persisted in local storage for each user
+
+Improved
+
+- Important controls (Model / Sessions / Params) are expanded by default
+- Secondary controls (Archives / Thinking / UI) are collapsed by default for a shorter sidebar
+
 v7.0.2
 
 Added

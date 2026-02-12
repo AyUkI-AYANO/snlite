@@ -4,8 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <meta name="theme-color" content="#0b0f14" />
-  <title>SNLite v7.0.2</title>
-  <link rel="stylesheet" href="/static/style.css?v=7.0.2" />
+  <title>SNLite v7.1.0</title>
+  <link rel="stylesheet" href="/static/style.css?v=7.1.0" />
 </head>
 <body>
   <div class="app">
@@ -14,161 +14,182 @@
         <div class="logo">SN</div>
         <div>
           <div class="title">SNLite</div>
-          <div class="sub">v7.0.2 · Local GenAI</div>
+          <div class="sub">v7.1.0 · Local GenAI</div>
         </div>
       </div>
 
-      <section class="panel">
-        <div class="panel-title">
-          Model
-          <span class="help" data-tip="选择后端与模型。图片输入仅对多模态模型生效。Thinking trace 仅对支持 thinking 的模型生效。">?</span>
-        </div>
-        <div class="row">
-          <select id="providerSelect"></select>
-        </div>
-        <div class="row">
-          <select id="modelSelect"></select>
-        </div>
-        <div class="row">
-          <button id="btnRefresh">Refresh</button>
-          <button id="btnLoad" class="primary">Load</button>
-          <button id="btnUnload">Unload</button>
-        </div>
-        <div id="modelStatus" class="hint"></div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">
-          Sessions
-          <span class="help" data-tip="每个会话是一条独立聊天。第一轮对话完成后会根据首条用户消息自动生成标题。">?</span>
-        </div>
-        <div class="row">
-          <button id="btnNewSession" class="primary">New</button>
-          <button id="btnRenameSession">Rename</button>
-          <button id="btnArchiveSession" class="danger">Archive</button>
-          <button id="btnDeleteSession" class="danger">Delete</button>
-        </div>
-        <div class="row">
-          <input id="sessionGroup" placeholder="Group name..." />
-          <button id="btnSetGroup">Set Group</button>
-        </div>
-        <div id="sessions" class="sessions"></div>
-        <div class="row">
-          <input id="sessionSearch" placeholder="Search sessions..." />
-        </div>
-        <div class="row">
-          <button id="btnExport">Export .md</button>
-          <button id="btnExportJson">Export .json</button>
-        </div>
-        <div class="row">
-          <button id="btnExportAll">Backup all</button>
-          <button id="btnImportAll">Import</button>
-          <button id="btnCompact">Compact</button>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">Archived Chats</div>
-        <div class="row">
-          <button id="btnRefreshArchives">Refresh</button>
-          <button id="btnDeleteArchive" class="danger">Delete archive</button>
-        </div>
-        <div id="archives" class="archives"></div>
-        <textarea id="archiveContent" rows="8" readonly placeholder="选择归档后在这里查看 .txt 内容"></textarea>
-      </section>
-
-      <section class="panel">
-        <div class="panel-title">
-          Thinking (Ollama native)
-          <span class="help" data-tip="stream 会分离 message.thinking 与 message.content。Show trace 只控制是否展示，不影响模型是否思考。">?</span>
-        </div>
-
-        <div class="row">
-          <label class="small" style="flex:1;">
-            Think mode
-            <span class="help" data-tip="Auto：不显式传 think（使用模型默认）。On/Off：对大多数模型是 true/false。GPT-OSS 需要 low/medium/high。">?</span>
-          </label>
-        </div>
-        <div class="row">
-          <select id="thinkMode">
-            <option value="auto">auto (default)</option>
-            <option value="on">on</option>
-            <option value="off">off</option>
-            <option value="low">low (gpt-oss)</option>
-            <option value="medium">medium (gpt-oss)</option>
-            <option value="high">high (gpt-oss)</option>
-          </select>
-        </div>
-
-        <div class="row switch-row" style="margin-top:6px;">
-          <label class="switch">
-            <input id="showTrace" type="checkbox" />
-            <span class="slider"></span>
-          </label>
-          <div class="switch-text">
-            <div class="switch-title">
-              Show trace in workspace
-              <span class="help" data-tip="开启后：右侧工作区显示 thinking token 流。关闭后：仍可使用 think，但 UI 不展示。">?</span>
+      <div class="tile-list">
+        <details class="panel tile" data-tile="model" open>
+          <summary class="panel-title tile-title">
+            <span>Model</span>
+            <span class="tile-meta">重点</span>
+            <span class="help" data-tip="选择后端与模型。图片输入仅对多模态模型生效。Thinking trace 仅对支持 thinking 的模型生效。">?</span>
+          </summary>
+          <div class="tile-body">
+            <div class="row">
+              <select id="providerSelect"></select>
             </div>
-            <div class="hint">UI only.</div>
+            <div class="row">
+              <select id="modelSelect"></select>
+            </div>
+            <div class="row">
+              <button id="btnRefresh">Refresh</button>
+              <button id="btnLoad" class="primary">Load</button>
+              <button id="btnUnload">Unload</button>
+            </div>
+            <div id="modelStatus" class="hint"></div>
           </div>
-        </div>
-      </section>
+        </details>
 
-      <section class="panel">
-        <div class="panel-title">
-          UI
-          <span class="help" data-tip="自动滚动：流式生成时跟随到底部；当你手动向上滚动阅读旧消息时，会暂停自动滚动，避免抢控制。">?</span>
-        </div>
-        <div class="row switch-row">
-          <label class="switch">
-            <input id="autoScroll" type="checkbox" checked />
-            <span class="slider"></span>
-          </label>
-          <div class="switch-text">
-            <div class="switch-title">Auto-scroll during streaming</div>
-            <div class="hint">Pauses when you scroll up.</div>
+        <details class="panel tile" data-tile="sessions" open>
+          <summary class="panel-title tile-title">
+            <span>Sessions</span>
+            <span class="tile-meta">重点</span>
+            <span class="help" data-tip="每个会话是一条独立聊天。第一轮对话完成后会根据首条用户消息自动生成标题。">?</span>
+          </summary>
+          <div class="tile-body">
+            <div class="row">
+              <button id="btnNewSession" class="primary">New</button>
+              <button id="btnRenameSession">Rename</button>
+              <button id="btnArchiveSession" class="danger">Archive</button>
+              <button id="btnDeleteSession" class="danger">Delete</button>
+            </div>
+            <div class="row">
+              <input id="sessionGroup" placeholder="Group name..." />
+              <button id="btnSetGroup">Set Group</button>
+            </div>
+            <div id="sessions" class="sessions"></div>
+            <div class="row">
+              <input id="sessionSearch" placeholder="Search sessions..." />
+            </div>
+            <div class="row">
+              <button id="btnExport">Export .md</button>
+              <button id="btnExportJson">Export .json</button>
+            </div>
+            <div class="row">
+              <button id="btnExportAll">Backup all</button>
+              <button id="btnImportAll">Import</button>
+              <button id="btnCompact">Compact</button>
+            </div>
           </div>
-        </div>
-      </section>
+        </details>
 
-      <section class="panel">
-        <div class="panel-title">
-          Params
-          <span class="help" data-tip="这些参数会影响生成风格与随机性。不同模型支持程度不同。">?</span>
-        </div>
+        <details class="panel tile" data-tile="params" open>
+          <summary class="panel-title tile-title">
+            <span>Params</span>
+            <span class="tile-meta">常用</span>
+            <span class="help" data-tip="这些参数会影响生成风格与随机性。不同模型支持程度不同。">?</span>
+          </summary>
+          <div class="tile-body">
+            <div class="param">
+              <div class="param-head">
+                <span>temperature <span class="help" data-tip="随机性/发散度。越高越有创意但更不稳定；越低越严谨但更保守。">?</span></span>
+                <span class="badge" id="tempVal"></span>
+              </div>
+              <input id="temperature" class="range" type="range" min="0" max="2" step="0.05" value="0.7" />
+            </div>
 
-        <div class="param">
-          <div class="param-head">
-            <span>temperature <span class="help" data-tip="随机性/发散度。越高越有创意但更不稳定；越低越严谨但更保守。">?</span></span>
-            <span class="badge" id="tempVal"></span>
-          </div>
-          <input id="temperature" class="range" type="range" min="0" max="2" step="0.05" value="0.7" />
-        </div>
+            <div class="param">
+              <div class="param-head">
+                <span>top_p <span class="help" data-tip="核采样阈值。越低越保守；与 temperature 共同作用。">?</span></span>
+                <span class="badge" id="topPVal"></span>
+              </div>
+              <input id="top_p" class="range" type="range" min="0" max="1" step="0.05" value="0.9" />
+            </div>
 
-        <div class="param">
-          <div class="param-head">
-            <span>top_p <span class="help" data-tip="核采样阈值。越低越保守；与 temperature 共同作用。">?</span></span>
-            <span class="badge" id="topPVal"></span>
+            <div class="param-grid">
+              <div>
+                <label class="small">max tokens (num_predict)
+                  <span class="help" data-tip="最大输出 token 数（Ollama: num_predict）。越大越长，但更慢、更吃资源。">?</span>
+                </label>
+                <input id="num_predict" type="number" min="16" max="8192" step="16" value="512" />
+              </div>
+              <div>
+                <label class="small">repeat_penalty
+                  <span class="help" data-tip="重复惩罚。提高可减少复读，但过高可能导致语言不自然。">?</span>
+                </label>
+                <input id="repeat_penalty" type="number" min="0.8" max="2.0" step="0.05" value="1.1" />
+              </div>
+            </div>
           </div>
-          <input id="top_p" class="range" type="range" min="0" max="1" step="0.05" value="0.9" />
-        </div>
+        </details>
 
-        <div class="param-grid">
-          <div>
-            <label class="small">max tokens (num_predict)
-              <span class="help" data-tip="最大输出 token 数（Ollama: num_predict）。越大越长，但更慢、更吃资源。">?</span>
-            </label>
-            <input id="num_predict" type="number" min="16" max="8192" step="16" value="512" />
+        <details class="panel tile" data-tile="archives">
+          <summary class="panel-title tile-title">
+            <span>Archived Chats</span>
+            <span class="tile-meta">次要</span>
+          </summary>
+          <div class="tile-body">
+            <div class="row">
+              <button id="btnRefreshArchives">Refresh</button>
+              <button id="btnDeleteArchive" class="danger">Delete archive</button>
+            </div>
+            <div id="archives" class="archives"></div>
+            <textarea id="archiveContent" rows="8" readonly placeholder="选择归档后在这里查看 .txt 内容"></textarea>
           </div>
-          <div>
-            <label class="small">repeat_penalty
-              <span class="help" data-tip="重复惩罚。提高可减少复读，但过高可能导致语言不自然。">?</span>
-            </label>
-            <input id="repeat_penalty" type="number" min="0.8" max="2.0" step="0.05" value="1.1" />
+        </details>
+
+        <details class="panel tile" data-tile="thinking">
+          <summary class="panel-title tile-title">
+            <span>Thinking (Ollama native)</span>
+            <span class="tile-meta">次要</span>
+            <span class="help" data-tip="stream 会分离 message.thinking 与 message.content。Show trace 只控制是否展示，不影响模型是否思考。">?</span>
+          </summary>
+          <div class="tile-body">
+
+            <div class="row">
+              <label class="small" style="flex:1;">
+                Think mode
+                <span class="help" data-tip="Auto：不显式传 think（使用模型默认）。On/Off：对大多数模型是 true/false。GPT-OSS 需要 low/medium/high。">?</span>
+              </label>
+            </div>
+            <div class="row">
+              <select id="thinkMode">
+                <option value="auto">auto (default)</option>
+                <option value="on">on</option>
+                <option value="off">off</option>
+                <option value="low">low (gpt-oss)</option>
+                <option value="medium">medium (gpt-oss)</option>
+                <option value="high">high (gpt-oss)</option>
+              </select>
+            </div>
+
+            <div class="row switch-row" style="margin-top:6px;">
+              <label class="switch">
+                <input id="showTrace" type="checkbox" />
+                <span class="slider"></span>
+              </label>
+              <div class="switch-text">
+                <div class="switch-title">
+                  Show trace in workspace
+                  <span class="help" data-tip="开启后：右侧工作区显示 thinking token 流。关闭后：仍可使用 think，但 UI 不展示。">?</span>
+                </div>
+                <div class="hint">UI only.</div>
+              </div>
+            </div>
           </div>
-        </div>
-      </section>
+        </details>
+
+        <details class="panel tile" data-tile="ui">
+          <summary class="panel-title tile-title">
+            <span>UI</span>
+            <span class="tile-meta">次要</span>
+            <span class="help" data-tip="自动滚动：流式生成时跟随到底部；当你手动向上滚动阅读旧消息时，会暂停自动滚动，避免抢控制。">?</span>
+          </summary>
+          <div class="tile-body">
+            <div class="row switch-row">
+              <label class="switch">
+                <input id="autoScroll" type="checkbox" checked />
+                <span class="slider"></span>
+              </label>
+              <div class="switch-text">
+                <div class="switch-title">Auto-scroll during streaming</div>
+                <div class="hint">Pauses when you scroll up.</div>
+              </div>
+            </div>
+          </div>
+        </details>
+      </div>
     </aside>
 
     <main class="main">
@@ -263,6 +284,6 @@
     </aside>
   </div>
 
-  <script src="/static/app.js?v=7.0.2"></script>
+  <script src="/static/app.js?v=7.1.0"></script>
 </body>
 </html>
