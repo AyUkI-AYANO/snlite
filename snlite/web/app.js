@@ -1,4 +1,4 @@
-/* SNLite web app (v7.2.1)
+/* SNLite web app (v8.0.0)
    Vanilla JS only, local-first UI.
 */
 
@@ -23,6 +23,7 @@ const FILE_MAX_BYTES = 6 * 1024 * 1024;
 const FILE_MAX_COUNT = 3;
 
 const I18N_KEY = "snlite.ui.lang.v1";
+const UI_STYLE_KEY = "snlite.ui.style.v1";
 const i18nState = {
   current: "zh-CN",
   fallback: "en",
@@ -110,6 +111,10 @@ function applyStaticI18n() {
   setText('.tile[data-tile="thinking"] .switch-text .hint', t('thinking.ui_only'));
 
   setText('label[for="langSelect"]', t('ui.language'));
+  setText('label[for="uiStyleSelect"]', t('ui.style'));
+  setOptionText('uiStyleSelect', 'uix8', t('ui.style_uix8'));
+  setOptionText('uiStyleSelect', 'uix7', t('ui.style_uix7'));
+  setOptionText('uiStyleSelect', 'uixone', t('ui.style_uixone'));
   setText('.tile[data-tile="ui"] .switch-title', t('ui.autoscroll'));
   setText('.tile[data-tile="ui"] .switch-text .hint', t('ui.autoscroll_hint'));
 
@@ -169,6 +174,30 @@ function applyStaticI18n() {
   setAttr('.workspace-title .help', 'data-tip', t('tip.workspace'));
 
   document.querySelectorAll('.tile[data-tile]').forEach((tile) => syncTileBodyHeight(tile));
+}
+
+function applyUIStyle(styleName) {
+  const style = ["uix8", "uix7", "uixone"].includes(styleName) ? styleName : "uix8";
+  document.body.setAttribute("data-ui-style", style);
+  const select = $("uiStyleSelect");
+  if (select && select.value !== style) {
+    select.value = style;
+  }
+}
+
+function initUIStyle() {
+  const select = $("uiStyleSelect");
+  const saved = localStorage.getItem(UI_STYLE_KEY);
+  const initial = ["uix8", "uix7", "uixone"].includes(saved) ? saved : "uix8";
+  applyUIStyle(initial);
+  if (select) {
+    select.value = initial;
+    select.onchange = () => {
+      const nextStyle = select.value;
+      localStorage.setItem(UI_STYLE_KEY, nextStyle);
+      applyUIStyle(nextStyle);
+    };
+  }
 }
 
 
@@ -1746,6 +1775,7 @@ async function send() {
 
 /* ---------- Init ---------- */
 async function init() {
+  initUIStyle();
   installSidebarTiles();
   installHelpTooltips(); // ✅ v0.5.2
   await initI18n();

@@ -23,8 +23,8 @@ class LocalePluginRecord:
 
 
 ZH_CN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.2.1",
-    "brand.sub": "v7.2.1 · 本地 GenAI",
+    "page.title": "SNLite v8.0.0",
+    "brand.sub": "v8.0.0 · 本地 GenAI",
     "tile.model": "模型",
     "tile.sessions": "会话",
     "tile.params": "参数",
@@ -32,6 +32,10 @@ ZH_CN_MESSAGES: Dict[str, str] = {
     "tile.thinking": "思考（Ollama 原生）",
     "tile.ui": "界面",
     "ui.language": "语言",
+    "ui.style": "UI 风格",
+    "ui.style_uix8": "UIx8（新版优雅）",
+    "ui.style_uix7": "UIx7（经典）",
+    "ui.style_uixone": "UIxOne（极简）",
     "ui.primary": "重点",
     "ui.common": "常用",
     "ui.secondary": "次要",
@@ -179,8 +183,8 @@ ZH_CN_MESSAGES: Dict[str, str] = {
 }
 
 EN_MESSAGES: Dict[str, str] = {
-    "page.title": "SNLite v7.2.1",
-    "brand.sub": "v7.2.1 · Local GenAI",
+    "page.title": "SNLite v8.0.0",
+    "brand.sub": "v8.0.0 · Local GenAI",
     "tile.model": "Model",
     "tile.sessions": "Sessions",
     "tile.params": "Params",
@@ -188,6 +192,10 @@ EN_MESSAGES: Dict[str, str] = {
     "tile.thinking": "Thinking (Ollama native)",
     "tile.ui": "UI",
     "ui.language": "Language",
+    "ui.style": "UI Style",
+    "ui.style_uix8": "UIx8 (Elegant)",
+    "ui.style_uix7": "UIx7 (Classic)",
+    "ui.style_uixone": "UIxOne (Minimal)",
     "ui.primary": "Primary",
     "ui.common": "Common",
     "ui.secondary": "Secondary",
