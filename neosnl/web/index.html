@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeoSNL 8.0.1</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <main class="wrap">
+    <h1>NeoSNL <span>8.0.1 experimental</span></h1>
+    <p class="muted">Independent runtime from SNLite. Run with <code>neosnl</code>.</p>
+
+    <section class="card">
+      <label>Model</label>
+      <div class="row">
+        <select id="model"></select>
+        <button id="refresh">Refresh models</button>
+      </div>
+    </section>
+
+    <section class="card">
+      <label>Prompt Duel (experimental)</label>
+      <textarea id="prompt" rows="5" placeholder="Ask one question and compare two temperatures..."></textarea>
+      <div class="row">
+        <input id="tempA" type="number" step="0.1" value="0.2" />
+        <input id="tempB" type="number" step="0.1" value="0.9" />
+        <button id="run">Run duel</button>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card"><h3>Left (Temp A)</h3><pre id="outA"></pre></article>
+      <article class="card"><h3>Right (Temp B)</h3><pre id="outB"></pre></article>
+    </section>
+  </main>
+  <script src="/static/app.js"></script>
+</body>
+</html>

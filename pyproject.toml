@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "snlite"
-version = "7.1.1"
+version = "8.0.1"
 description = "SNLite - lightweight local GenAI chat framework with browser GUI"
 requires-python = ">=3.10"
 dependencies = [
@@ -17,6 +17,7 @@ dependencies = [
 
 [project.scripts]
 snlite = "snlite.cli:run"
+neosnl = "neosnl.cli:run"
 
 [project.entry-points."snlite.providers"]
 echo = "snlite.plugins.example_provider:plugin_entry"
@@ -25,11 +26,12 @@ echo = "snlite.plugins.example_provider:plugin_entry"
 include-package-data = true
 
 [tool.setuptools.packages.find]
-include = ["snlite*"]
+include = ["snlite*", "neosnl*"]
 exclude = ["data*", "models*", "configs*", "tests*"]
 
 [tool.setuptools.package-data]
 snlite = ["web/*"]
+neosnl = ["web/*"]
 
 [project.entry-points."snlite.locales"]
 example_ja = "snlite.plugins.example_locale:plugin_entry"
