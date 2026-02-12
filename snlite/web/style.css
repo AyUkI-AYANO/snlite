@@ -894,3 +894,155 @@ button.ghost:hover{
   margin: 0 0 10px 0;
   background: rgba(0,0,0,0.14);
 }
+
+/* ===== NEO 8.0.0 visual overhaul ===== */
+:root{
+  --neo-bg-0:#070a14;
+  --neo-bg-1:#0f1730;
+  --neo-glow:rgba(97, 196, 255, 0.36);
+  --neo-border:rgba(155, 188, 255, 0.24);
+}
+
+body.neo-theme{
+  background:
+    radial-gradient(circle at 8% -8%, rgba(96, 132, 255, 0.32), transparent 34%),
+    radial-gradient(circle at 82% -12%, rgba(24, 228, 255, 0.2), transparent 40%),
+    linear-gradient(145deg, var(--neo-bg-0), var(--neo-bg-1) 52%, #080d1d);
+  min-height: 100vh;
+}
+
+.neo-theme .app{
+  width: min(1760px, calc(100vw - 40px));
+  margin: 20px auto;
+  min-height: calc(100vh - 40px);
+  border: 1px solid var(--neo-border);
+  border-radius: 28px;
+  overflow: hidden;
+  background: rgba(5, 10, 24, 0.72);
+  box-shadow:
+    0 30px 90px rgba(0,0,0,0.45),
+    0 0 0 1px rgba(146, 190, 255, 0.12) inset,
+    0 0 40px rgba(58, 120, 255, 0.14) inset;
+  backdrop-filter: blur(14px);
+}
+
+.neo-theme .sidebar,
+.neo-theme .main,
+.neo-theme .workspace{
+  background: linear-gradient(180deg, rgba(9,16,38,0.76), rgba(5,9,22,0.86));
+}
+
+.neo-sidebar-banner{
+  border: 1px solid rgba(142, 205, 255, 0.26);
+  background: linear-gradient(150deg, rgba(80,120,255,0.22), rgba(51, 225, 255, 0.12));
+  border-radius: 16px;
+  padding: 12px;
+  margin: 4px 0 14px;
+  box-shadow: 0 8px 24px rgba(34, 63, 138, 0.3);
+}
+.neo-sidebar-kicker{
+  font-size: 11px;
+  letter-spacing: .14em;
+  color: rgba(211, 227, 255, 0.74);
+}
+.neo-sidebar-title{
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 780;
+}
+.neo-sidebar-desc{
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: rgba(229, 238, 255, 0.8);
+}
+
+.neo-theme .brand{
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(174, 205, 255, 0.15);
+}
+
+.neo-theme .logo{
+  background: linear-gradient(135deg, #7ad7ff, #6e7cff 58%, #9f6fff);
+  color: #041027;
+  box-shadow: 0 0 0 3px rgba(145, 193, 255, 0.16), 0 10px 24px rgba(66, 119, 255, 0.4);
+}
+
+.neo-theme .tile{
+  border: 1px solid rgba(155, 196, 255, 0.2);
+  background: linear-gradient(170deg, rgba(17,30,66,0.74), rgba(9,15,32,0.82));
+  border-radius: 16px;
+}
+
+.neo-theme .tile-title,
+.neo-theme .panel-title{
+  font-weight: 760;
+}
+
+.neo-theme .topbar{
+  grid-template-columns: 1.2fr auto 1fr;
+  gap: 14px;
+  border-bottom: 1px solid rgba(153, 194, 255, 0.18);
+  background: linear-gradient(160deg, rgba(11,20,46,0.72), rgba(8,13,30,0.82));
+  box-shadow: 0 10px 24px rgba(1,8,24,0.4);
+}
+
+.neo-header-info{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+.neo-header-kicker{ font-size:11px; text-transform:uppercase; letter-spacing:.13em; color:rgba(163,212,255,.72); }
+.neo-header-title{ font-size:18px; font-weight:800; letter-spacing:.01em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+
+.neo-theme .pill{
+  border: 1px solid rgba(161, 213, 255, 0.28);
+  background: linear-gradient(160deg, rgba(75, 108, 255, 0.2), rgba(20, 38, 74, 0.6));
+  color: #dff1ff;
+}
+
+.neo-theme .chat,
+.neo-theme .composer,
+.neo-theme .workspace{
+  background: radial-gradient(circle at 14% -20%, rgba(110,157,255,0.16), transparent 40%), rgba(6,12,29,0.7);
+}
+
+.neo-theme .system-card,
+.neo-theme .bubble,
+.neo-theme .workspace-text,
+.neo-theme textarea,
+.neo-theme input,
+.neo-theme select{
+  border-color: rgba(141, 188, 255, 0.27);
+  background: rgba(7, 16, 39, 0.72);
+}
+
+.neo-theme button{
+  border-color: rgba(130, 183, 255, 0.32);
+  background: linear-gradient(160deg, rgba(26,48,99,0.78), rgba(12,22,45,0.86));
+}
+.neo-theme button.primary{
+  border-color: rgba(137, 223, 255, 0.58);
+  background: linear-gradient(135deg, #3b82ff, #35ccff);
+  color: #041123;
+  font-weight: 760;
+  box-shadow: 0 10px 24px rgba(44, 149, 255, 0.36);
+}
+.neo-theme button.danger{
+  background: linear-gradient(140deg, rgba(184, 50, 66, 0.92), rgba(119, 16, 33, 0.94));
+}
+
+.neo-theme .workspace{
+  border-left: 1px solid rgba(156, 206, 255, 0.18);
+}
+
+.neo-theme .snlite-tooltip{
+  background: rgba(8,18,38,0.96);
+  border-color: rgba(150, 205, 255, 0.32);
+  box-shadow: 0 14px 32px rgba(0,0,0,0.5), 0 0 18px rgba(100, 175, 255, 0.22);
+}
+
+@media (max-width: 1360px){
+  .neo-theme .topbar{ grid-template-columns: 1fr; }
+  .neo-theme .neo-header-info{ order: -1; }
+}
+
+@media (max-width: 920px){
+  .neo-theme .app{ width: calc(100vw - 20px); margin: 10px auto; min-height: calc(100vh - 20px); border-radius: 18px; }
+}
