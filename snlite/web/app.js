@@ -167,6 +167,8 @@ function applyStaticI18n() {
   setAttr('.system-title .help', 'data-tip', t('tip.system_prompt'));
   setAttr('.composer-label .help', 'data-tip', t('tip.message_input'));
   setAttr('.workspace-title .help', 'data-tip', t('tip.workspace'));
+
+  document.querySelectorAll('.tile[data-tile]').forEach((tile) => syncTileBodyHeight(tile));
 }
 
 
@@ -286,6 +288,13 @@ function positionTooltip(tipEl, targetEl, text) {
 }
 
 
+function syncTileBodyHeight(tile) {
+  if (!tile) return;
+  const body = tile.querySelector(":scope > .tile-body");
+  if (!body) return;
+  body.style.setProperty("--tile-body-h", `${body.scrollHeight}px`);
+}
+
 function installSidebarTiles() {
   const KEY = "snlite.sidebar.tiles.v1";
   const tiles = Array.from(document.querySelectorAll(".tile[data-tile]"));
@@ -298,12 +307,16 @@ function installSidebarTiles() {
     saved = {};
   }
 
+  const syncAllHeights = () => tiles.forEach((tile) => syncTileBodyHeight(tile));
+
   tiles.forEach((tile) => {
     const name = tile.dataset.tile;
     if (Object.prototype.hasOwnProperty.call(saved, name)) {
       tile.open = !!saved[name];
     }
+    syncTileBodyHeight(tile);
     tile.addEventListener("toggle", () => {
+      syncTileBodyHeight(tile);
       const next = {};
       tiles.forEach((t) => {
         next[t.dataset.tile] = t.open;
@@ -311,6 +324,8 @@ function installSidebarTiles() {
       localStorage.setItem(KEY, JSON.stringify(next));
     });
   });
+
+  window.addEventListener("resize", syncAllHeights);
 }
 
 function installHelpTooltips() {
@@ -801,8 +816,10 @@ function setAssistantMeta(metaEl, data = {}) {
 function wsClear() { $("wsText").textContent = ""; }
 function wsShow(show) {
   const ws = $("workspace");
+  const app = document.querySelector(".app");
   ws.classList.toggle("hidden", !show);
   ws.setAttribute("aria-hidden", show ? "false" : "true");
+  if (app) app.classList.toggle("workspace-open", !!show);
 }
 
 /* ---------- Models ---------- */
