@@ -16,6 +16,7 @@ import uvicorn
 from snlite.registry import AppRegistry
 from snlite.store import SessionStore, DEFAULT_GROUP
 from snlite.plugin_manager import PluginRecord, load_provider_plugins
+from snlite.i18n import load_locales
 from snlite.providers.ollama import OllamaProvider
 
 from docx import Document
@@ -31,7 +32,7 @@ MAX_FILE_BYTES = 6 * 1024 * 1024
 MAX_EXTRACT_CHARS_PER_FILE = 8000
 MAX_TOTAL_EXTRACT_CHARS = 16000
 
-app = FastAPI(title="SNLite", version="7.1.0")
+app = FastAPI(title="SNLite", version="7.1.1")
 
 WEB_DIR = os.path.join(os.path.dirname(__file__), "web")
 app.mount("/static", StaticFiles(directory=WEB_DIR), name="static")
@@ -49,6 +50,8 @@ _plugin_providers, _loaded_plugin_records = load_provider_plugins()
 for provider_name, provider in _plugin_providers.items():
     PROVIDERS[provider_name] = provider
 PLUGIN_RECORDS.extend(_loaded_plugin_records)
+
+LOCALES, LOCALE_PLUGIN_RECORDS = load_locales()
 
 
 @app.middleware("http")
@@ -102,6 +105,32 @@ async def list_provider_plugins() -> Dict[str, Any]:
             }
             for x in PLUGIN_RECORDS
         ]
+    }
+
+
+@app.get("/api/i18n/locales")
+async def list_i18n_locales() -> Dict[str, Any]:
+    return {
+        "default": "zh-CN",
+        "locales": [
+            {
+                "code": code,
+                "name": meta.get("name") or code,
+                "messages": meta.get("messages") or {},
+            }
+            for code, meta in LOCALES.items()
+        ],
+        "plugins": [
+            {
+                "code": x.code,
+                "name": x.name,
+                "source": x.source,
+                "module": x.module,
+                "loaded": x.loaded,
+                "error": x.error,
+            }
+            for x in LOCALE_PLUGIN_RECORDS
+        ],
     }
 
 

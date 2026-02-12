@@ -1,5 +1,8 @@
 [console_scripts]
 snlite = snlite.cli:run
 
+[snlite.locales]
+example_ja = snlite.plugins.example_locale:plugin_entry
+
 [snlite.providers]
 echo = snlite.plugins.example_provider:plugin_entry

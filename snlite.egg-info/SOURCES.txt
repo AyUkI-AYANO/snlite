@@ -1,6 +1,7 @@
 pyproject.toml
 snlite/__init__.py
 snlite/cli.py
+snlite/i18n.py
 snlite/main.py
 snlite/ollama_manager.py
 snlite/plugin_manager.py
@@ -13,6 +14,7 @@ snlite.egg-info/entry_points.txt
 snlite.egg-info/requires.txt
 snlite.egg-info/top_level.txt
 snlite/plugins/__init__.py
+snlite/plugins/example_locale.py
 snlite/plugins/example_provider.py
 snlite/providers/__init__.py
 snlite/providers/base.py
